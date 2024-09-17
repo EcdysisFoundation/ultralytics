@@ -1,3 +1,13 @@
+# this repo specific
+# some folders and files may need to be created on remotes
+*.JPG
+datasets/*/labels/*.txt
+label_studio_exports
+runs
+dataset.yml
+*.pt
+
+#  misc. / other
 node_modules
 *.pyc
 *.ipynb
