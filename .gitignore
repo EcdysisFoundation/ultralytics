@@ -1,3 +1,8 @@
+# add stuff here
+local_files
+
+##################
+# default stuff below
 # this repo specific
 # some folders and files may need to be created on remotes
 *.JPG

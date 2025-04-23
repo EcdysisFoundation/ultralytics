@@ -1,5 +1,23 @@
-import math
 import os
+from pathlib import Path
+import yaml
+
+
+def make_yaml_dict(dataset_folder, class_index):
+    return {
+            'path': '../' + dataset_folder,
+            'train': 'images/train',
+            'val': 'images/val',
+            'test': 'images/test',
+            'names': class_index
+        }
+
+
+def save_yaml_file(dataset_folder, class_names):
+    yaml_name = 'data.yaml'
+    y = make_yaml_dict(dataset_folder, class_names)
+    with (Path(dataset_folder)/yaml_name).open('w') as f:
+        yaml.dump(y, f)
 
 
 def check_missing_files(data):

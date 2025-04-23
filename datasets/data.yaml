@@ -1,0 +1,17 @@
+names:
+  0: Orthoptera
+  1: Odonata
+  2: Isopoda
+  3: Polydesmida
+  4: Araneae
+  5: Neuroptera
+  6: Psocodea
+  7: Lithobiomorpha
+  8: Ixodida
+  9: Thysanoptera
+  10: Opiliones
+  11: Coleoptera
+path: ../datasets
+test: images/test
+train: images/train
+val: images/val
