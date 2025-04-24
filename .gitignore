@@ -4,6 +4,7 @@ datasets/images/*
 !datasets/images/__init__.py
 datasets/labels/*
 !datasets/labels/__init__.py
+datasets/data.yaml
 
 ##################
 # default stuff below
