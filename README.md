@@ -10,6 +10,8 @@ If using .zsh on mac
 
 `conda init zsh` then close and reopen shell
 
+Activatae environment
+
 `conda activate ultralytics-ev`
 
 Install for Cuda
