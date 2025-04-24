@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 import numpy as np
 import pandas as pd
@@ -25,12 +26,22 @@ def save_class_images(splits: dict, c: str, df, class_to_index):
         df: complete dataframe of records
         class_to_index: lookup to get index from class name
     """
+    parent_images = Path(DATASETS_FOLDER) / 'images'
+    parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
             continue
-        parent_i = Path(DATASETS_FOLDER) / 'images' / split_name
-        parent_l = Path(DATASETS_FOLDER) / 'labels' / split_name
+
+        parent_i =  parent_images / split_name
+        if os.path.exists(parent_i):
+            shutil.rmtree(parent_i)
+        parent_i.mkdir(parents=True, exist_ok=True)
+
+        parent_l = parent_labels / split_name
+        if os.path.exists(parent_l):
+            shutil.rmtree(parent_l)
+        parent_l.mkdir(parents=True, exist_ok=True)
 
         print(f'Writing images to {parent_i}')
         for img in tqdm(split_img,
@@ -86,6 +97,11 @@ def split_from_df(
     class_to_index = {n: i for i, n in class_index.items()}
 
     images = dict(df.groupby(class_col)['image'].apply(list))
+    print(images)
+
+    # for testing
+    images = {'Arthropod': [values[0] for i, values in images.items()]}
+    print(images)
 
     splits = {}
     for c, image_list in images.items():

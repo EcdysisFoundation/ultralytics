@@ -1,5 +1,9 @@
 # add stuff here
 local_files
+datasets/images/*
+!datasets/images/__init__.py
+datasets/labels/*
+!datasets/labels/__init__.py
 
 ##################
 # default stuff below
