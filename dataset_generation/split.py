@@ -50,7 +50,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index):
             dst = parent_i / src.name
             label_filename = os.path.splitext(src.name)[0] + '.txt'
 
-            v = df[df['image'] == img]
+            v = df[df['full_image_path'] == img]
             # there should be onlyone here, take the first
             c_indx = class_to_index[v['specimen__classification__gbif_order'].iloc[0]]
 
