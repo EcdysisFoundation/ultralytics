@@ -62,7 +62,6 @@ def save_class_images(splits: dict, c: str, df, class_to_index):
                 for a in v['yolo_annotations'].iloc[0]:
                     annotation = [c_indx] + a
                     for idx, l in enumerate(annotation):
-                        print(l)
                         if idx == len(annotation) - 1:
                             f.write(f"{l}\n")
                         else:
@@ -96,12 +95,7 @@ def split_from_df(
     class_index = {i: n for i, n in enumerate(classes)}
     class_to_index = {n: i for i, n in class_index.items()}
 
-    images = dict(df.groupby(class_col)['image'].apply(list))
-    print(images)
-
-    # for testing
-    images = {'Arthropod': [values[0] for i, values in images.items()]}
-    print(images)
+    images = dict(df.groupby(class_col)['full_image_path'].apply(list))
 
     splits = {}
     for c, image_list in images.items():
