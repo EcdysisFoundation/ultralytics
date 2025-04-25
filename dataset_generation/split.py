@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from pathlib import Path
 from tqdm import tqdm
 
-from .utils import save_yaml_file
+from .utils import save_yaml_file, check_minimum_length
 
 
 SEED = 42
@@ -100,6 +100,9 @@ def split_from_df(
     splits = {}
     for c, image_list in images.items():
         c = str(c)
+        if not check_minimum_length(image_list, train_size):
+            print('Not enough images for class: {0}, skipping this one'.format(c))
+            continue
         train, test_val = train_test_split(image_list, train_size=train_size, random_state=SEED)
         val, test = train_test_split(test_val, train_size=train_size, random_state=SEED)
 
