@@ -75,7 +75,7 @@ def convert_annotation_to_yolo(labels):
 
 def check_minimum_length(image_list, train_size):
     x = len(image_list) * train_size / 2
-    if x >= 1.0:
+    if x >= 2.0:
         return True
     else:
         return False
