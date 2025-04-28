@@ -1,5 +1,4 @@
 import os
-import shutil
 import logging
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def save_class_images(splits: dict, c: str, df, class_to_index):
+def save_class_images(splits: dict, c: str, df, class_to_index, test):
     """
     Save images of a class divided in splits
     This assumes single specimen images, one species per image
@@ -29,37 +28,41 @@ def save_class_images(splits: dict, c: str, df, class_to_index):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
+    # Clear previous runs, make fresh directories
+    subfolders = ('train', 'val', 'test')
+    for name in subfolders:
+        parent_i =  parent_images / name
+        parent_i.mkdir(parents=True, exist_ok=True)
+
+        parent_l = parent_labels / name
+        parent_l.mkdir(parents=True, exist_ok=True)
+
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
             continue
 
         parent_i =  parent_images / split_name
-        if os.path.exists(parent_i):
-            shutil.rmtree(parent_i)
-        parent_i.mkdir(parents=True, exist_ok=True)
-
         parent_l = parent_labels / split_name
-        if os.path.exists(parent_l):
-            shutil.rmtree(parent_l)
-        parent_l.mkdir(parents=True, exist_ok=True)
 
-        print(f'Writing images to {parent_i}')
+        logger.info(f'Writing images to {parent_i}')
         for img in tqdm(split_img,
                         desc=f'Copying {len(split_img)} {split_name} images of {c.replace("_", " ")} class'):
             src = Path(img)
             dst = parent_i / src.name
             label_filename = os.path.splitext(src.name)[0] + '.txt'
 
-            v = df[df['full_image_path'] == img]
             # there should be onlyone here, take the first
-            c_indx = class_to_index[v['specimen__classification__gbif_order'].iloc[0]]
+            v = df[df['full_image_path'] == img].iloc[0]
 
-            if not dst.is_file() and src.is_file():
-               dst.symlink_to(src)
+            c_indx = class_to_index[v['specimen__classification__gbif_order']]
+
+            if not test:
+                if not dst.is_file() and src.is_file():
+                    dst.symlink_to(src)
 
             # save the annotations label file
             with open(parent_l / label_filename, 'w') as f:
-                for a in v['yolo_annotations'].iloc[0]:
+                for a in v['yolo_annotations']:
                     annotation = [c_indx] + a
                     for idx, l in enumerate(annotation):
                         if idx == len(annotation) - 1:
@@ -68,10 +71,10 @@ def save_class_images(splits: dict, c: str, df, class_to_index):
                             f.write(f"{l} ")
 
 
-
 def split_from_df(
         df: pd.DataFrame,
         class_col,
+        test,
         train_size=0.8):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
@@ -108,8 +111,7 @@ def split_from_df(
 
         splits[c] = {'train': train, 'val': val, 'test': test}
 
-        save_class_images(splits, c, df, class_to_index)
-
+        save_class_images(splits, c, df, class_to_index, test)
 
     save_yaml_file(DATASETS_FOLDER, class_index)
     return splits

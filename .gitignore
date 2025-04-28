@@ -5,6 +5,7 @@ datasets/images/*
 datasets/labels/*
 !datasets/labels/__init__.py
 datasets/data.yaml
+*.csv
 
 ##################
 # default stuff below

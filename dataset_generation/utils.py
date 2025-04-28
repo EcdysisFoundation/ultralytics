@@ -1,6 +1,11 @@
+import logging
 import os
+import pandas as pd
 from pathlib import Path
 import yaml
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def make_yaml_dict(dataset_folder, class_index):
@@ -20,21 +25,24 @@ def save_yaml_file(dataset_folder, class_names):
         yaml.dump(y, f)
 
 
-def check_missing_files(data):
+def check_missing_files(data, test):
     # check if files exist
     missingcsv = 'local_files/missing_images.csv'
-    print('Checking for missing images ...')
+    logger.info('Checking for missing images ...')
     data['exists'] = data['full_image_path'].astype(str).map(os.path.exists)
     missing_images = data[data['exists'] == False]
     if len(missing_images):
         v = len(missing_images)
         if v >= 20:
             v = 20
-        print('some images are missing. Up to the first 20 are...')
-        print(missing_images.iloc[0:v])
-        print('saving to file {0} ....'.format(missingcsv))
+        logger.info('some images are missing. Up to the first 20 are...')
+        logger.info(missing_images.iloc[0:v])
+        logger.info('saving to file {0} ....'.format(missingcsv))
         missing_images.to_csv(missingcsv)
-        return None
+        if not test:
+            return None
+        else:
+            return 'In Testing mode, we found missing images...'
     return 'All images found'
 
 
@@ -79,3 +87,40 @@ def check_minimum_length(image_list, train_size):
         return True
     else:
         return False
+
+
+def get_count_per_class_split(splits, class_name):
+    """
+    Get the number of images per class in each split
+    splits has the following format (as in the splits.yaml file)
+    {
+     '99': {
+            'test': [  '/path/to/test_image1_for_class_99.jpg',... ],
+            'train': [  '/path/to/train_image1_for_class_99.jpg',...  ],
+            'val': [  '/path/to/val_image1_for_class_99.jpg', ...]
+        },
+        ...
+    }
+    Args:
+        splits: Dictionary of lists of image paths per split, the key is the class name, the value is a dict of split, list of image path of that split and class
+    Returns:
+        Dataframe with the number of images per class in each split, columns are split names (train,test,val), rows are class ids
+    """
+    counts = []
+
+    for class_id, split in splits.items():
+        # id, train, test, val
+        counts.append({class_name:class_id, **{split_name: len(image_paths) for split_name, image_paths in split.items()}})
+    return pd.DataFrame(counts)
+
+
+def generate_split_class_report(splits, class_name):
+    """
+    Return the dataset sample count report
+    """
+
+    counts_df = get_count_per_class_split(splits, class_name)
+
+    counts_df["total_samples"] = counts_df["train"] + counts_df["val"] + counts_df["test"]
+
+    return counts_df.sort_values(by=class_name)
