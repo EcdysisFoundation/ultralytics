@@ -57,8 +57,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test):
             c_indx = class_to_index[v['specimen__classification__gbif_order']]
 
             if not test:
-                if not dst.is_file() and src.is_file():
-                    dst.symlink_to(src)
+                dst.symlink_to(src)
 
             # save the annotations label file
             with open(parent_l / label_filename, 'w') as f:
