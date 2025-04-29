@@ -31,11 +31,11 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test):
     # Clear previous runs, make fresh directories
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
-        parent_i =  parent_images / name
-        parent_i.mkdir(parents=True, exist_ok=True)
+        i =  parent_images / name
+        i.mkdir(parents=True, exist_ok=True)
 
-        parent_l = parent_labels / name
-        parent_l.mkdir(parents=True, exist_ok=True)
+        l = parent_labels / name
+        l.mkdir(parents=True, exist_ok=True)
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
