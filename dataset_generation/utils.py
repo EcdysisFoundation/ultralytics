@@ -25,7 +25,7 @@ def save_yaml_file(dataset_folder, class_names):
         yaml.dump(y, f)
 
 
-def check_missing_files(data, test):
+def check_missing_files(data, test_flag):
     # check if files exist
     missingcsv = 'local_files/missing_images.csv'
     logger.info('Checking for missing images ...')
@@ -39,7 +39,7 @@ def check_missing_files(data, test):
         logger.info(missing_images.iloc[0:v])
         logger.info('saving to file {0} ....'.format(missingcsv))
         missing_images.to_csv(missingcsv)
-        if not test:
+        if not test_flag:
             return None
         else:
             return 'In Testing mode, we found missing images...'

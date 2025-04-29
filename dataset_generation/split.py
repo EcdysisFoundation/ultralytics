@@ -15,7 +15,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def save_class_images(splits: dict, c: str, df, class_to_index, test):
+def save_class_images(splits: dict, c: str, df, class_to_index, test_flag):
     """
     Save images of a class divided in splits
     This assumes single specimen images, one species per image
@@ -56,7 +56,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test):
 
             c_indx = class_to_index[v['specimen__classification__gbif_order']]
 
-            if not test:
+            if not test_flag:
                 dst.symlink_to(src)
 
             # save the annotations label file
@@ -73,7 +73,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test):
 def split_from_df(
         df: pd.DataFrame,
         class_col,
-        test,
+        test_flag,
         train_size=0.8):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
@@ -110,7 +110,7 @@ def split_from_df(
 
         splits[c] = {'train': train, 'val': val, 'test': test}
 
-        save_class_images(splits, c, df, class_to_index, test)
+        save_class_images(splits, c, df, class_to_index, test_flag)
 
     save_yaml_file(DATASETS_FOLDER, class_index)
     return splits
