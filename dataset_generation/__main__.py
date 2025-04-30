@@ -13,7 +13,7 @@ def get_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(description='Dataset generation')
     parser.add_argument(
-        '--class-name', type=str, default='specimen__classification__gbif_order',
+        '--class-col', type=str, default='specimen__classification__gbif_order',
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-cpy', '--copy-files', action='store_true')
@@ -27,7 +27,7 @@ def main():
     db = ObjectDetectData()
     full_data = db.get_full_df()
 
-    category_counts = full_data[args.class_name].value_counts()
+    category_counts = full_data[args.class_col].value_counts()
 
     logger.info('category counts')
     logger.info(category_counts)
