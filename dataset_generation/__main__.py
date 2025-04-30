@@ -45,7 +45,7 @@ def main():
     full_data.to_csv('local_files/full_data.csv')
 
     splits = split_from_df(full_data, args)
-    report_count_df = generate_split_class_report(splits, args.class_name)
+    report_count_df = generate_split_class_report(splits, args.class_col)
     report_count_df.to_csv(Path(DATASETS_FOLDER) / 'dataset_report.csv', index=False)
 
 
