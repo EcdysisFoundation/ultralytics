@@ -30,6 +30,12 @@ def save_class_images(splits: dict, c: str, df, class_to_index, args):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
+    # Clear previous runs, make fresh directories
+    if os.path.exists(parent_images):
+        shutil.rmtree(parent_images)
+    if os.path.exists(parent_labels):
+        shutil.rmtree(parent_labels)
+
     def copy_img(src: Path, dst: Path):
         logger.debug(f'Copying {src} to {dst}')
         try:
@@ -37,17 +43,11 @@ def save_class_images(splits: dict, c: str, df, class_to_index, args):
         except SameFileError:
             logger.warning(f'File {dst} already present, skipping')
 
-    # Clear previous runs, make fresh directories
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
         i =  parent_images / name
-        if os.path.exists(i):
-            shutil.rmtree(i)
         i.mkdir(parents=True)
-
         l = parent_labels / name
-        if os.path.exists(l):
-            shutil.rmtree(l)
         l.mkdir(parents=True)
 
     for split_name, split_img in splits[c].items():
