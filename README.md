@@ -45,5 +45,3 @@ Download a new training selections file to Ecdysis02
 Run the dataset generation script
 
 `python -m dataset_generation`
-
-

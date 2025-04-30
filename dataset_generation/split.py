@@ -2,8 +2,10 @@ import os
 import logging
 import numpy as np
 import pandas as pd
+import shutil
 from sklearn.model_selection import train_test_split
 from pathlib import Path
+from shutil import copy, SameFileError
 from tqdm import tqdm
 
 from .utils import save_yaml_file, check_minimum_length
@@ -15,7 +17,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def save_class_images(splits: dict, c: str, df, class_to_index, test_flag):
+def save_class_images(splits: dict, c: str, df, class_to_index, args):
     """
     Save images of a class divided in splits
     This assumes single specimen images, one species per image
@@ -28,14 +30,25 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test_flag):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
+    def copy_img(src: Path, dst: Path):
+        logger.debug(f'Copying {src} to {dst}')
+        try:
+            copy(src, dst, follow_symlinks=True)
+        except SameFileError:
+            logger.warning(f'File {dst} already present, skipping')
+
     # Clear previous runs, make fresh directories
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
         i =  parent_images / name
-        i.mkdir(parents=True, exist_ok=True)
+        if os.path.exists(i):
+            shutil.rmtree(i)
+        i.mkdir(parents=True)
 
         l = parent_labels / name
-        l.mkdir(parents=True, exist_ok=True)
+        if os.path.exists(l):
+            shutil.rmtree(l)
+        l.mkdir(parents=True)
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
@@ -56,8 +69,13 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test_flag):
 
             c_indx = class_to_index[v['specimen__classification__gbif_order']]
 
-            if not test_flag:
-                dst.symlink_to(src)
+            if not args.test_flag:
+                if args.symlinks:
+                    # Ultralytics does not currently support symlinks
+                    # sourced on a different machine, if image.read() != b'\xff\xd9'
+                    dst.symlink_to(src)
+                else:
+                    copy_img(src, dst)
 
             # save the annotations label file
             with open(parent_l / label_filename, 'w') as f:
@@ -72,8 +90,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, test_flag):
 
 def split_from_df(
         df: pd.DataFrame,
-        class_col,
-        test_flag,
+        args,
         train_size=0.8):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
@@ -93,11 +110,11 @@ def split_from_df(
     df=df.copy()
 
     df.replace('', np.nan, inplace=True)  # Handle empty strings
-    classes = df[class_col].drop_duplicates()
+    classes = df[args.class_col].drop_duplicates()
     class_index = {i: n for i, n in enumerate(classes)}
     class_to_index = {n: i for i, n in class_index.items()}
 
-    images = dict(df.groupby(class_col)['full_image_path'].apply(list))
+    images = dict(df.groupby(args.class_col)['full_image_path'].apply(list))
 
     splits = {}
     for c, image_list in images.items():
@@ -110,7 +127,7 @@ def split_from_df(
 
         splits[c] = {'train': train, 'val': val, 'test': test}
 
-        save_class_images(splits, c, df, class_to_index, test_flag)
+        save_class_images(splits, c, df, class_to_index, args)
 
     save_yaml_file(DATASETS_FOLDER, class_index)
     return splits
