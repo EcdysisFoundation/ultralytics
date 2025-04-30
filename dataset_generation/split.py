@@ -70,12 +70,12 @@ def save_class_images(splits: dict, c: str, df, class_to_index, args):
             c_indx = class_to_index[v['specimen__classification__gbif_order']]
 
             if not args.test_flag:
-                if args.symlinks:
+                if args.copy_files:
+                    copy_img(src, dst)
+                else:
                     # Ultralytics does not currently support symlinks
                     # sourced on a different machine, if image.read() != b'\xff\xd9'
                     dst.symlink_to(src)
-                else:
-                    copy_img(src, dst)
 
             # save the annotations label file
             with open(parent_l / label_filename, 'w') as f:

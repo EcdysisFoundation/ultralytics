@@ -15,8 +15,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         '--class-name', type=str, default='specimen__classification__gbif_order',
         help='The column to catagorize the images')
-    parser.add_argument('-t', '--test-flag',
-                    action='store_true')
+    parser.add_argument('-t', '--test-flag', action='store_true')
+    parser.add_argument('-cpy', '--copy-files', action='store_true')
 
     return parser.parse_args()
 
@@ -44,7 +44,7 @@ def main():
     full_data['yolo_annotations'] = full_data['object_det_label'].apply(convert_annotation_to_yolo)
     full_data.to_csv('local_files/full_data.csv')
 
-    splits = split_from_df(full_data, args.class_name, args.test_flag)
+    splits = split_from_df(full_data, args)
     report_count_df = generate_split_class_report(splits, args.class_name)
     report_count_df.to_csv(Path(DATASETS_FOLDER) / 'dataset_report.csv', index=False)
 
