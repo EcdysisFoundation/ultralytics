@@ -17,7 +17,23 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def save_class_images(splits: dict, c: str, df, class_to_index, args):
+def create_clear_dirs():
+    parent_images = Path(DATASETS_FOLDER) / 'images'
+    parent_labels = Path(DATASETS_FOLDER) / 'labels'
+
+    # Clear previous runs, make fresh directories
+    if os.path.exists(parent_images):
+        shutil.rmtree(parent_images)
+    if os.path.exists(parent_labels):
+        shutil.rmtree(parent_labels)
+
+    return {
+        'parent_images': parent_images,
+        'parent_labels': parent_labels
+    }
+
+
+def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     """
     Save images of a class divided in splits
     This assumes single specimen images, one species per image
@@ -27,14 +43,6 @@ def save_class_images(splits: dict, c: str, df, class_to_index, args):
         df: complete dataframe of records
         class_to_index: lookup to get index from class name
     """
-    parent_images = Path(DATASETS_FOLDER) / 'images'
-    parent_labels = Path(DATASETS_FOLDER) / 'labels'
-
-    # Clear previous runs, make fresh directories
-    if os.path.exists(parent_images):
-        shutil.rmtree(parent_images)
-    if os.path.exists(parent_labels):
-        shutil.rmtree(parent_labels)
 
     def copy_img(src: Path, dst: Path):
         logger.debug(f'Copying {src} to {dst}')
@@ -45,17 +53,17 @@ def save_class_images(splits: dict, c: str, df, class_to_index, args):
 
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
-        i =  parent_images / name
+        i =  dirs['parent_images'] / name
         i.mkdir(parents=True)
-        l = parent_labels / name
+        l = dirs['parent_labels'] / name
         l.mkdir(parents=True)
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
             continue
 
-        parent_i =  parent_images / split_name
-        parent_l = parent_labels / split_name
+        parent_i =  dirs['parent_images'] / split_name
+        parent_l = dirs['parent_labels'] / split_name
 
         logger.info(f'Writing images to {parent_i}')
         for img in tqdm(split_img,
@@ -115,7 +123,7 @@ def split_from_df(
     class_to_index = {n: i for i, n in class_index.items()}
 
     images = dict(df.groupby(args.class_col)['full_image_path'].apply(list))
-
+    dirs = create_clear_dirs()
     splits = {}
     for c, image_list in images.items():
         c = str(c)
@@ -127,7 +135,7 @@ def split_from_df(
 
         splits[c] = {'train': train, 'val': val, 'test': test}
 
-        save_class_images(splits, c, df, class_to_index, args)
+        save_class_images(splits, c, df, class_to_index, dirs, args)
 
     save_yaml_file(DATASETS_FOLDER, class_index)
     return splits
