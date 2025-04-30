@@ -11,5 +11,5 @@ class ObjectDetectData:
     def get_full_df(self):
         d = pd.read_json(self.obj_det_export)
         p = Path(self.img_mount)
-        d['full_image_path'] = d['image'].apply(lambda x: str(p / x))
+        d['full_image_path'] = d['image_thumbnail_large'].apply(lambda x: str(p / x))
         return d
