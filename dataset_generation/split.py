@@ -27,6 +27,13 @@ def create_clear_dirs():
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
 
+    subfolders = ('train', 'val', 'test')
+    for name in subfolders:
+        i =  parent_images / name
+        i.mkdir(parents=True)
+        l = parent_labels / name
+        l.mkdir(parents=True)
+
     return {
         'parent_images': parent_images,
         'parent_labels': parent_labels
@@ -50,13 +57,6 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
             copy(src, dst, follow_symlinks=True)
         except SameFileError:
             logger.warning(f'File {dst} already present, skipping')
-
-    subfolders = ('train', 'val', 'test')
-    for name in subfolders:
-        i =  dirs['parent_images'] / name
-        i.mkdir(parents=True)
-        l = dirs['parent_labels'] / name
-        l.mkdir(parents=True)
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
