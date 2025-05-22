@@ -45,3 +45,15 @@ Download a new training selections file to Ecdysis02
 Run the dataset generation script
 
 `python -m dataset_generation`
+
+### Deployment
+
+The trained model is deployed using FastAPI. See https://github.com/EcdysisFoundation/inference-fastapi
+
+Two files are required. 1. The data.yaml renamed to yolo_data.yaml and 2. the model exported to .onnx format, renamed to yolo_best.onnx.
+
+To export the model, use for exmple
+
+    model = YOLO("path/to/best.pt")  # load a custom trained model
+
+    model.export(format="onnx")  # export to .onnx format
