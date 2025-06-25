@@ -51,6 +51,6 @@ def main():
 
     print('end of main')
 
-# This gets executed when running `python -m dataset_generation`
+# run with `python -m dataset_generation`
 if __name__ == '__main__':
     main()

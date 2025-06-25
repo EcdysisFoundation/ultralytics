@@ -2,7 +2,7 @@
 ### The environment
 
 https://docs.ultralytics.com/guides/conda-quickstart/
-Using alternative approaches known to cause problems.
+Using alternative approaches known to cause problems. This works on Unbuntu and Nvidia's Cuda. Pip versions may not.
 
 `conda create --name ultralytics-ev python=3.11 -y`
 
@@ -23,6 +23,10 @@ Install for local dev, without Nvidia GPUs
 `conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn`
 
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. To avoid problems with Ultralytics, try to only try to use the libraries it includes and those included above. If any other libraries are added, they need to be tested and documented here.
+
+Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale with YOLO.
+
+`conda install sahi -c conda-forge`
 
 ### Symlink image files
 
