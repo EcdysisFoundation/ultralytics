@@ -99,7 +99,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
 def split_from_df(
         df: pd.DataFrame,
         args,
-        train_size=0.8):
+        train_size=0.9):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
     group (stratification).
@@ -130,10 +130,9 @@ def split_from_df(
         if not check_minimum_length(image_list, train_size):
             print('Not enough images for class: {0}, skipping this one'.format(c))
             continue
-        train, test_val = train_test_split(image_list, train_size=train_size, random_state=SEED)
-        val, test = train_test_split(test_val, train_size=train_size, random_state=SEED)
+        train, val = train_test_split(image_list, train_size=train_size, random_state=SEED)
 
-        splits[c] = {'train': train, 'val': val, 'test': test}
+        splits[c] = {'train': train, 'val': val, 'test': []}
 
         save_class_images(splits, c, df, class_to_index, dirs, args)
 
