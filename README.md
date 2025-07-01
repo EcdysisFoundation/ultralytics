@@ -50,6 +50,12 @@ Run the dataset generation script
 
 `python -m dataset_generation`
 
+### Training
+
+Run with output saved to file
+
+`python -m train > last_training.log 2>&1 &`
+
 ### Deployment
 
 The trained model is deployed using FastAPI. See https://github.com/EcdysisFoundation/inference-fastapi
