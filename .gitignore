@@ -6,6 +6,7 @@ datasets/labels/*
 !datasets/labels/__init__.py
 datasets/data.yaml
 *.csv
+last_training.log
 
 ##################
 # default stuff below
