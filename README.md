@@ -56,6 +56,12 @@ Run with output saved to file
 
 `python -m train > last_training.log 2>&1 &`
 
+To run on both GPU's, there will be an error due to Intel library incompatibility, but you can use the force variable
+
+`export MKL_SERVICE_FORCE_INTEL=1`
+
+To resolve `Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library.`
+
 ### Deployment
 
 The trained model is deployed using FastAPI. See https://github.com/EcdysisFoundation/inference-fastapi
