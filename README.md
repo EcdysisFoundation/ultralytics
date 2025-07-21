@@ -26,7 +26,7 @@ Ultralytics uses a very large collection of libraries, including many common lib
 
 Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale with YOLO.
 
-`conda install sahi -c conda-forge`
+`conda install sahi scikit-image -c conda-forge`
 
 ### Symlink image files
 
@@ -73,3 +73,7 @@ To export the model, use for exmple
     model = YOLO("path/to/best.pt")  # load a custom trained model
 
     model.export(format="onnx")  # export to .onnx format
+
+zip the entire dir to download and examine output
+
+    tar -zcvf OUTPUTDIR.tar.gz OUTPUTDIR

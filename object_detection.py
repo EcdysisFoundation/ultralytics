@@ -5,19 +5,21 @@ from ultralytics import YOLO
 from sahi.predict import predict
 
 
-trained_model_path = 'runs/detect/train9/weights/best.pt'
-pretrained_model_path = 'yolov8n.pt'
+trained_model_path = 'runs/detect/train3/weights/best.pt'
+pretrained_model_path = 'runs/detect/train9/weights/best.pt'
 trained_model = YOLO(trained_model_path)
 pretrained_model = YOLO(pretrained_model_path)
 
+LOCAL_FILES_FOLDER = 'secondimage'
+
 # run inference example
-IMG_DIR = 'local_files/firstimage'
+IMG_DIR = 'local_files/' + LOCAL_FILES_FOLDER
 img_files = [
     IMG_DIR + '/' + f for f in listdir(IMG_DIR) if isfile(join(IMG_DIR, f))
 ]
 img_files = [i for i in img_files if basename(i)]
 
-project='local_files/output/firstimage'
+project='local_files/output/' + LOCAL_FILES_FOLDER
 confidence = 0.1
 
 # Standard predicton with the models
