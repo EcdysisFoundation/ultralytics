@@ -10,15 +10,15 @@ from sahi import AutoDetectionModel
 stitcher_dir = os.getcwd().replace('ultralytics', 'stitcher')
 
 api_list_url = 'http://localhost:8090/list-upload-files/'
-api_put_url = 'http://localhost:8090/update-predictions/'
+api_post_url = 'http://localhost:8090/update-predictions/'
 model_path = 'runs/detect/train3/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
-    model_type="ultralytics",
+    model_type='ultralytics',
     model_path=model_path,
     confidence_threshold=0.3,
-    device="cpu",  # or 'cuda:0'
+    device='cuda:0' # or 'cpu'
 )
 
 
@@ -81,7 +81,7 @@ def put_predictions(guid, predictions):
     }
 
     try:
-        response = requests.post(api_put_url, params=params, data=predictions, headers=headers)
+        response = requests.post(api_post_url, params=params, data=predictions, headers=headers)
         if response:
             if response.status_code != 200:
                 print(f"Error: {response.status_code}")
