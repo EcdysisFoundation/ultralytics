@@ -52,8 +52,11 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     """
 
     def copy_img(src: Path, dst: Path):
-        logger.debug(f'Copying {src} to {dst} using symlinks')
-        dst.symlink_to(src)
+        logger.debug(f'Copying {src} to {dst}')
+        try:
+            copy(src, dst, follow_symlinks=True)
+        except SameFileError:
+            logger.warning(f'File {dst} already present, skipping')
 
     for split_name, split_img in splits[c].items():
         if len(split_img) == 0:
