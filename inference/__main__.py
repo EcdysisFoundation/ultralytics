@@ -20,9 +20,7 @@ def main():
                 print(f'performing inference on {p}')
                 prediction = predict(p)
                 if prediction:
-                    response = put_predictions(stitcher_url, d['guid'], prediction)
-                    print(response.json())
-
+                    put_predictions(stitcher_url, d['guid'], prediction)
             else:
                 print('path not found')
                 print(p)
