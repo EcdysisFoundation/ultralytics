@@ -46,8 +46,8 @@ def predict(img_path, save_img_file=False):
     result = get_sliced_prediction(
         img_path,
         detection_model,
-        slice_height=640 * 4,
-        slice_width=640 * 4,
+        slice_height=640,
+        slice_width=640,
         overlap_height_ratio=0.2,
         overlap_width_ratio=0.2,
     )
