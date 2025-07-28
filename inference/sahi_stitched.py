@@ -6,7 +6,7 @@ from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
-model_path = 'runs/detect/train3/weights/best.pt'
+model_path = 'runs/detect/train4/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
