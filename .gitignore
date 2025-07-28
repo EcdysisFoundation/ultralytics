@@ -7,6 +7,7 @@ datasets/labels/*
 datasets/data.yaml
 *.csv
 last_training.log
+stitcher_dir
 
 ##################
 # default stuff below

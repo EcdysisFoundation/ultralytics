@@ -1,3 +1,4 @@
+import sys
 import logging
 import os
 import pandas as pd
@@ -5,6 +6,8 @@ from pathlib import Path
 import yaml
 
 logger = logging.getLogger(__name__)
+stream_handler = logging.StreamHandler(sys.stdout)
+
 logger.setLevel(logging.INFO)
 
 
