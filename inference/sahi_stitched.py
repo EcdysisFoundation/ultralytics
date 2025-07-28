@@ -6,11 +6,6 @@ from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
-# get the stitcher repo directory, assumes co-located
-stitcher_dir = os.getcwd().replace('ultralytics', 'stitcher')
-
-api_list_url = 'http://localhost:8090/list-upload-files/'
-api_post_url = 'http://localhost:8090/update-predictions/'
 model_path = 'runs/detect/train3/weights/best.pt'
 
 
@@ -51,8 +46,8 @@ def predict(img_path, save_img_file=False):
     result = get_sliced_prediction(
         img_path,
         detection_model,
-        slice_height=640,
-        slice_width=640,
+        slice_height=640 * 4,
+        slice_width=640 * 4,
         overlap_height_ratio=0.2,
         overlap_width_ratio=0.2,
     )
@@ -71,9 +66,10 @@ def predict(img_path, save_img_file=False):
     return format_result_label_studio(coco_result, result.image_width, result.image_height)
 
 
-def put_predictions(guid, predictions):
+def put_predictions(stitcher_url, guid, predictions):
 
     params = {'guid': str(guid)}
+    api_post_url = stitcher_url + 'update-predictions/'
 
     headers = {
         "Accept": "application/json",
@@ -91,49 +87,4 @@ def put_predictions(guid, predictions):
         print(e)
 
 
-def main():
-    all_data = []
-    offset =  0
-    limit = 100
 
-
-    while True:
-        print('*'*100)
-        params = {'offset': offset, 'limit': limit}
-        print(params)
-
-        try:
-            response = requests.get(api_list_url, params=params)
-        except Exception as e:
-            print(e)
-            break
-
-        if response.status_code == 200:
-            data = response.json()
-            if not data:
-                break
-
-            all_data.extend(data)
-            offset += limit
-        else:
-            print(f"Error: {response.status_code}")
-            break
-
-    print(f"Retrieved {len(all_data)} items.")
-
-    # counter = 0 # stop early while testing
-    for d in all_data:
-        # if counter == 1:
-        #    break
-        if d['panorama_path']:
-            p = stitcher_dir + d['panorama_path']
-            if os.path.exists(p):
-                predictions = predict(p)
-                put_predictions(d['guid'], predictions)
-                counter += 1
-            else:
-                print('panorama file does not exist: {0}'.format(p))
-
-
-if __name__ == '__main__':
-    main()

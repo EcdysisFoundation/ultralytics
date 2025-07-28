@@ -32,11 +32,16 @@ Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale wit
 
 The images are accessed through symlinks created during dataset generation. The drive location on Ecdysis01 needs to be mapped for this to work. This is done with the following command, and will need to be re-linked after a system reboot.
 
+bugbox3
+
 `sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/bugbox3/bugbox3/media/ /pool1/srv/bugbox3/bugbox3/media/ -o allow_other`
 
-Can check if the entry still exists by viewing `proc/self/mounts` as seen below. Or on filesystem usage with `df -H`
+stitcher
 
-`ecdysis@ecdysis01.local:/pool1/srv/bugbox3/bugbox3/media/ /pool1/srv/bugbox3/bugbox3/media fuse.sshfs rw,nosuid,nodev,relatime,user_id=0,group_id=0,allow_other 0 0`
+`sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/stitcher/media/ /pool1/srv/stitcher/media/ -o allow_other`
+
+Can check if the entry still exists by viewing filesystem usage with `df -H`
+
 
 ### Dataset Generation
 

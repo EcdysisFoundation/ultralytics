@@ -1,3 +1,4 @@
+import sys
 import argparse
 import logging
 from pathlib import Path
@@ -6,6 +7,7 @@ from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
 logger = logging.getLogger(__name__)
+stream_handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(logging.INFO)
 
 
