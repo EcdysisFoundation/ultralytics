@@ -17,8 +17,11 @@ def main():
             p = file_mount + d['panorama_path']
 
             if os.path.exists(p):
+                print(f'performing inference on {p}')
                 prediction = predict(p)
-                print(prediction)
+                if prediction:
+                    response = put_predictions(stitcher_url, d['guid'], prediction)
+                    print(response.json())
 
             else:
                 print('path not found')
