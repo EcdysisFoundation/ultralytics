@@ -10,7 +10,7 @@ stitcher_url = 'http://ecdysis01.local:8090/'
 def main():
 
     all_data = get_stitcher_data(stitcher_url)
-    file_mount = '/pool1/srv/stitcher'
+    file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
 
     for d in all_data:
         if d['panorama_path']:
