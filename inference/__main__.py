@@ -15,7 +15,7 @@ def main():
     for d in all_data:
         if d['panorama_path']:
             p = file_mount + d['panorama_path']
-
+            p = p.replace('/media', '')
             if os.path.exists(p):
                 print(f'performing inference on {p}')
                 prediction = predict(p)
