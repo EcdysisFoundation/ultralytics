@@ -13,7 +13,7 @@ detection_model = AutoDetectionModel.from_pretrained(
     model_type='ultralytics',
     model_path=model_path,
     confidence_threshold=0.3,
-    device='cuda:0' # or 'cpu'
+    device='cuda:0'  # or 'cpu'
 )
 
 
@@ -21,7 +21,7 @@ def format_result_label_studio(coco_result, image_width, image_height):
 
     result = [
                 {
-                    "id": i,
+                    "id": str(i),
                     "original_width": image_width,
                     "original_height": image_height,
                     "image_rotation": 0,
@@ -52,7 +52,8 @@ def predict(img_path, save_img_file=False):
         overlap_width_ratio=0.2,
     )
 
-    coco_result = result.to_coco_predictions(image_id=os.path.basename(img_path))
+    coco_result = result.to_coco_predictions(
+        image_id=os.path.basename(img_path))
 
     # optionally save image file
     if save_img_file:
@@ -62,8 +63,8 @@ def predict(img_path, save_img_file=False):
             hide_labels=True,
             hide_conf=True)
 
-
-    return format_result_label_studio(coco_result, result.image_width, result.image_height)
+    return format_result_label_studio(
+        coco_result, result.image_width, result.image_height)
 
 
 def put_predictions(stitcher_url, guid, predictions):
@@ -85,6 +86,3 @@ def put_predictions(stitcher_url, guid, predictions):
             print('Response returned None')
     except Exception as e:
         print(e)
-
-
-
