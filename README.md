@@ -30,7 +30,7 @@ Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale wit
 
 ### Symlink image files
 
-The images are accessed through symlinks created during dataset generation. The drive location on Ecdysis01 needs to be mapped for this to work. This is done with the following command, and will need to be re-linked after a system reboot.
+The images are accessed through symlinks created during dataset generation. The drive location on Ecdysis01 needs to be mapped for this to work. This is done with the following command, and will need to be re-linked after a system reboot. For new mounts, first make a directory locally where the external mount will exist (second argument).
 
 bugbox3
 
@@ -38,7 +38,7 @@ bugbox3
 
 stitcher
 
-`sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/stitcher/media/ /pool1/srv/stitcher/media/ -o allow_other`
+`sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/label-studio/mydata/stitchermedia /pool1/srv/label-studio/mydata/stitchermedia -o allow_other`
 
 Can check if the entry still exists by viewing filesystem usage with `df -H`
 

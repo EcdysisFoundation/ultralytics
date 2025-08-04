@@ -30,10 +30,10 @@ def format_result_label_studio(coco_result, image_width, image_height):
                     "origin": "prediction",
                     "type": "rectanglelabels",
                     "value": {
-                            "x": v['bbox'][0],
-                            "y": v['bbox'][1],
-                            "width": v['bbox'][2],
-                            "height": v['bbox'][3],
+                            "x": v['bbox'][0] / image_width * 100,
+                            "y": v['bbox'][1] / image_height * 100,
+                            "width": v['bbox'][2] / image_width * 100,
+                            "height": v['bbox'][3] / image_height * 100,
                             "rotation": 0,
                             "rectanglelabels": ["Arthropod"],
                         }
