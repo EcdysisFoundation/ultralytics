@@ -12,7 +12,7 @@ def get_stitcher_data(stitcher_url):
         params = {
             'offset': offset,
             'limit': limit,
-            'label_studio_filter': True}
+            'approved': True}
 
         try:
             response = requests.get(api_list_url, params=params)
@@ -33,5 +33,4 @@ def get_stitcher_data(stitcher_url):
             break
 
     print(f"Retrieved {len(all_data)} items.")
-
     return all_data
