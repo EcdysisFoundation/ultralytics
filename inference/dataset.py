@@ -4,13 +4,15 @@ import requests
 def get_stitcher_data(stitcher_url):
     api_list_url = stitcher_url + 'list-upload-files/'
     all_data = []
-    offset =  0
+    offset = 0
     limit = 100
-
 
     while True:
 
-        params = {'offset': offset, 'limit': limit}
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'label_studio_filter': True}
 
         try:
             response = requests.get(api_list_url, params=params)
