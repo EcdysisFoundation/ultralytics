@@ -4,16 +4,20 @@ from .dataset import get_stitcher_data
 from .sahi_stitched import predict, put_predictions
 
 
-stitcher_url = 'http://ecdysis01.local:8090/'
+# stitcher_url = 'http://ecdysis01.local:8090/'
+stitcher_url = 'http://localhost:8090/'
 
 
 def main():
 
     all_data = get_stitcher_data(stitcher_url)
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
+    dont_overwrite = True
 
     for d in all_data:
         if d['panorama_path']:
+            if dont_overwrite and d['predictions']:
+                continue
             p = file_mount + d['panorama_path']
             p = p.replace('/media', '')
             if os.path.exists(p):
