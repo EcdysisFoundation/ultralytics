@@ -4,8 +4,7 @@ from .dataset import get_stitcher_data
 from .sahi_stitched import predict, put_predictions
 
 
-# stitcher_url = 'http://ecdysis01.local:8090/'
-stitcher_url = 'http://localhost:8090/'
+stitcher_url = 'http://ecdysis01.local:8090/'
 
 
 def main():
