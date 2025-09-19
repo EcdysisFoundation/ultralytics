@@ -1,3 +1,5 @@
+import os
+import json
 import requests
 import sys
 import argparse
@@ -67,6 +69,21 @@ def pano_training_set():
     api_list_url = STITCHER_URL + '/list-upload-files/'
     offset = 0
     limit = 10
+    dataset_dir = os.getcwd()
+    print('dataset_dir')
+    print(dataset_dir)
+    out_json = dataset_dir + '/dataset_pano/dataset.json'
+    print('out_json')
+    print(out_json)
+
+    coco_json_source = {
+        "images": [],
+        "categories": [{
+            "supercategory": "Arthropod",
+            "id": 1,
+            "name": "arthropod"}],
+        "annotations": [],
+    }
 
     while True:
         params = {
@@ -89,16 +106,38 @@ def pano_training_set():
                 break
 
             print(f'data returned from api for next {limit} records')
-            for row in data[:2]:
-                print(filter_transform_record(row))
-            break
+            for i, row in enumerate(data):
+                if row['annotations']:
+                    # temp limit to one record
+                    if row['guid'] == '134854c0-f889-4933-9139-3d77f201be85':
+                        r = filter_transform_record(row)
+                        coco_json_source['images'].append({
+                            "height": r['coco_annotations'][0]['image_height'],
+                            "width": r['coco_annotations'][0]['image_width'],
+                            "id": i,
+                            "file_name": r['file_name']})
+                        annotations = [{
+                            "category_id": 1,
+                            "image_id": i,
+                            "bbox": (v['x'], v['y'], v['width'], v['height']),
+                            "iscrowd": 0,
+                            "segmentation": [],
+                            "area": None
+                        } for v in row['coco_annotations']]
+                        coco_json_source['annotations'] += annotations
 
             offset += limit
         else:
             print(f"Error: {response.status_code}")
             break
 
+    with open(out_json, 'w') as f:
+        json.dump(coco_json_source, f, indent=1)
+
 
 # run with `python -m dataset_generation`
 if __name__ == '__main__':
+    """
+    Assumes running from ultralytics home dir with 'python -m dataset_generation'
+    """
     pano_training_set()

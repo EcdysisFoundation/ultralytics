@@ -127,3 +127,22 @@ def generate_split_class_report(splits, class_name):
     counts_df["total_samples"] = counts_df["train"] + counts_df["val"] + counts_df["test"]
 
     return counts_df.sort_values(by=class_name)
+
+
+def convert_coco_to_yolo(c):
+    """
+    Convert coco annotation to yolo format given
+    'x': x,
+    'y': y,
+    'width': width,
+    'height': height,
+    'image_width': image_width,
+    'image_height': image_height
+    return x_center y_center width height # as ratios
+    """
+    x_center = (c['width'] / 2 + c['x']) / c['image_width']
+    y_center = (c['height'] / 2 + c['y']) / c['image_height']
+    width = c['width'] / c['image_width']
+    height = c['height'] / c['image_height']
+
+    return (x_center, y_center, width, height)
