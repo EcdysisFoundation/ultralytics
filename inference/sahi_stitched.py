@@ -42,6 +42,18 @@ def format_result_label_studio(coco_result, image_width, image_height):
     return json.dumps(result)
 
 
+def label_studio_to_coco(bbox, image_width, image_height):
+    """
+    Undo format_result_label_studio() bounding box.
+    """
+    x, y, width, height = bbox
+    x = x / 100 * image_width
+    y = y / 100 * image_height
+    width = width / 100 * image_width
+    height = height / 100 * image_height
+    return (x, y, width, height)
+
+
 def predict(img_path, save_img_file=False):
     result = get_sliced_prediction(
         img_path,

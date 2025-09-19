@@ -1,8 +1,12 @@
+import requests
 import sys
 import argparse
 import logging
 from pathlib import Path
 from .split import split_from_df, DATASETS_FOLDER
+from .stitcher_api import (
+    filter_transform_record, get_root_message,
+    ERROR_MSG_KEY, STITCHER_URL)
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -23,7 +27,7 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main():
+def single_specimen_trainingset():
     args = get_args()
 
     db = ObjectDetectData()
@@ -50,9 +54,51 @@ def main():
     report_count_df = generate_split_class_report(splits, args.class_col)
     report_count_df.to_csv(Path(DATASETS_FOLDER) / 'dataset_report.csv', index=False)
 
-
     print('end of main')
+
+
+def pano_training_set():
+
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
+        return
+
+    api_list_url = STITCHER_URL + '/list-upload-files/'
+    offset = 0
+    limit = 10
+
+    while True:
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+        print('-list-upload-files-' * 10)
+        print(params)
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+
+            print(f'data returned from api for next {limit} records')
+            for row in data[:2]:
+                print(filter_transform_record(row))
+            break
+
+            offset += limit
+        else:
+            print(f"Error: {response.status_code}")
+            break
+
 
 # run with `python -m dataset_generation`
 if __name__ == '__main__':
-    main()
+    pano_training_set()
