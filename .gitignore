@@ -19,6 +19,10 @@ stitcher_dir
 # this repo specific
 # some folders and files may need to be created on remotes
 *.JPG
+*.jpg
+*.png
+*.PNG
+*.json
 datasets/*/labels/*.txt
 label_studio_exports
 runs

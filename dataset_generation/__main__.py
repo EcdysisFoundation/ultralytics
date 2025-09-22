@@ -109,22 +109,22 @@ def pano_training_set():
             for i, row in enumerate(data):
                 if row['annotations']:
                     # temp limit to one record
-                    if row['guid'] == '134854c0-f889-4933-9139-3d77f201be85':
-                        r = filter_transform_record(row)
-                        coco_json_source['images'].append({
-                            "height": r['coco_annotations'][0]['image_height'],
-                            "width": r['coco_annotations'][0]['image_width'],
-                            "id": i,
-                            "file_name": r['file_name']})
-                        annotations = [{
-                            "category_id": 1,
-                            "image_id": i,
-                            "bbox": (v['x'], v['y'], v['width'], v['height']),
-                            "iscrowd": 0,
-                            "segmentation": [],
-                            "area": None
-                        } for v in row['coco_annotations']]
-                        coco_json_source['annotations'] += annotations
+                    # if row['guid'] == '134854c0-f889-4933-9139-3d77f201be85':
+                    r = filter_transform_record(row)
+                    coco_json_source['images'].append({
+                        "height": r['coco_annotations'][0]['image_height'],
+                        "width": r['coco_annotations'][0]['image_width'],
+                        "id": i,
+                        "file_name": r['file_name']})
+                    annotations = [{
+                        "category_id": 1,
+                        "image_id": i,
+                        "bbox": (v['x'], v['y'], v['width'], v['height']),
+                        "iscrowd": 0,
+                        "segmentation": [],
+                        "area": None
+                    } for v in row['coco_annotations']]
+                    coco_json_source['annotations'] += annotations
 
             offset += limit
         else:
@@ -132,7 +132,7 @@ def pano_training_set():
             break
 
     with open(out_json, 'w') as f:
-        json.dump(coco_json_source, f, indent=1)
+        json.dump(coco_json_source, f)  # , indent=1
 
 
 # run with `python -m dataset_generation`
