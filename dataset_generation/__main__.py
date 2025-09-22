@@ -69,7 +69,7 @@ def pano_training_set():
     api_list_url = STITCHER_URL + '/list-upload-files/'
     offset = 0
     limit = 10
-    dataset_dir = os.getcwd()
+    dataset_dir = ''  # os.getcwd()
     print('dataset_dir')
     print(dataset_dir)
     out_json = dataset_dir + '/dataset_pano/dataset.json'

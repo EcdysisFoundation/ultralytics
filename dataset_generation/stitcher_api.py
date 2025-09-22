@@ -1,10 +1,12 @@
-import os
+# import os
 import requests
 
 from inference.sahi_stitched import label_studio_to_coco
-from .utils import convert_coco_to_yolo
 
-STITCHER_URL = 'http://localhost:8090'
+# local dev
+# STITCHER_URL = 'http://localhost:8090'
+# production url
+STITCHER_URL = 'http://ecdysis01.local:8090'
 FILE_MOUNT = '/pool1/srv/label-studio/mydata/stitchermedia'
 
 ERROR_MSG_KEY = 'ERROR'
@@ -66,11 +68,13 @@ def extract_bbox(a):
 def filter_transform_record(row):
     if not row['annotations']:
         return
-    cwd = os.getcwd()
-    # replace with FILE_MOUNT
-    file_mount = cwd.replace('ultralytics', 'label-studio/mydata/stitchermedia')
+
+    # replace with FILE_MOUNT for production
+    # use file_mount for local dev
+    # cwd = os.getcwd()
+    # file_mount = cwd.replace('ultralytics', 'label-studio/mydata/stitchermedia')
     file_name = row['panorama_path'].replace('/media', '')
-    row['panorama_path'] = file_mount + file_name
+    row['panorama_path'] = FILE_MOUNT + file_name
     coco_annotations = [
         label_studio_to_coco(
             extract_bbox(a), a['original_width'], a['original_height']) for a in row['annotations']]
@@ -79,4 +83,3 @@ def filter_transform_record(row):
         'file_name': file_name
     })
     return row
-
