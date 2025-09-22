@@ -4,6 +4,11 @@ datasets/images/*
 !datasets/images/__init__.py
 datasets/labels/*
 !datasets/labels/__init__.py
+crop_images/source_images/*
+!crop_images/source_images/__init__.py
+crop_images/source_json/*
+!crop_images/source_json/__init__.py
+crop_images/cropped_images
 datasets/data.yaml
 *.csv
 last_training.log
@@ -14,6 +19,10 @@ stitcher_dir
 # this repo specific
 # some folders and files may need to be created on remotes
 *.JPG
+*.jpg
+*.png
+*.PNG
+*.json
 datasets/*/labels/*.txt
 label_studio_exports
 runs
