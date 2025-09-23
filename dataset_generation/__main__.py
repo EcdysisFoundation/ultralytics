@@ -112,17 +112,17 @@ def pano_training_set():
                 break
 
             print(f'data returned from api for next {limit} records')
-            for i, row in enumerate(data):
+            for row in data:
                 if row['annotations']:
                     r = filter_transform_record(row)
                     coco_json_source['images'].append({
                         "height": r['coco_annotations'][0]['image_height'],
                         "width": r['coco_annotations'][0]['image_width'],
-                        "id": i,
+                        "id": r['guid'],
                         "file_name": r['file_name']})
                     annotations = [{
                         "category_id": 1,
-                        "image_id": i,
+                        "image_id": r['guid'],
                         "bbox": (v['x'], v['y'], v['width'], v['height']),
                         "iscrowd": 0,
                         "segmentation": [],
