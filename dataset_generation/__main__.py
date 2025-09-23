@@ -118,11 +118,11 @@ def pano_training_set():
                     coco_json_source['images'].append({
                         "height": r['coco_annotations'][0]['image_height'],
                         "width": r['coco_annotations'][0]['image_width'],
-                        "id": r['guid'],
+                        "id": int(r['id']),
                         "file_name": r['file_name']})
                     annotations = [{
                         "category_id": 1,
-                        "image_id": r['guid'],
+                        "image_id": int(r['id']),
                         "bbox": (v['x'], v['y'], v['width'], v['height']),
                         "iscrowd": 0,
                         "segmentation": [],
