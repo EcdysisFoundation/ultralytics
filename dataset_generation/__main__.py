@@ -5,10 +5,16 @@ import sys
 import argparse
 import logging
 from pathlib import Path
+
+from sahi.slicing import slice_coco
+from sahi.utils.file import load_json
+
+from PIL import Image
+
 from .split import split_from_df, DATASETS_FOLDER
 from .stitcher_api import (
     filter_transform_record, get_root_message,
-    ERROR_MSG_KEY, STITCHER_URL)
+    ERROR_MSG_KEY, STITCHER_URL, FILE_MOUNT)
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -69,10 +75,10 @@ def pano_training_set():
     api_list_url = STITCHER_URL + '/list-upload-files/'
     offset = 0
     limit = 10
-    dataset_dir = ''  # os.getcwd()
-    print('dataset_dir')
-    print(dataset_dir)
-    out_json = dataset_dir + '/dataset_pano/dataset.json'
+    curr_dir = os.getcwd()
+    print('curr_dir')
+    print(curr_dir)
+    out_json = curr_dir + '/dataset_pano/dataset.json'
     print('out_json')
     print(out_json)
 
@@ -108,8 +114,6 @@ def pano_training_set():
             print(f'data returned from api for next {limit} records')
             for i, row in enumerate(data):
                 if row['annotations']:
-                    # temp limit to one record
-                    # if row['guid'] == '134854c0-f889-4933-9139-3d77f201be85':
                     r = filter_transform_record(row)
                     coco_json_source['images'].append({
                         "height": r['coco_annotations'][0]['image_height'],
@@ -135,9 +139,48 @@ def pano_training_set():
         json.dump(coco_json_source, f)  # , indent=1
 
 
+def slice_pano_training_set():
+    curr_dir = os.getcwd()
+    dataset_dir = curr_dir + '/dataset_pano'
+    dataset_json_path = dataset_dir + '/dataset.json'
+    dataset_sliced = dataset_dir = '/sliced/'
+    print(f'dataset_file_path: {dataset_json_path}')
+    source_img_dir = FILE_MOUNT
+    print(f'source_img_dir: {source_img_dir}')
+
+    coco_dict = load_json(dataset_json_path)
+    print('coco_dict read, first image is')
+    print(coco_dict["images"][0]["file_name"])
+
+    # avoid DecompressionBombError
+    max_image_pixels = Image.MAX_IMAGE_PIXELS
+    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
+    if max_image_pixels < 180000000:
+        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
+        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
+
+    coco_dict_sliced, coco_path = slice_coco(
+        coco_annotation_file_path=dataset_json_path,
+        image_dir=source_img_dir,
+        output_coco_annotation_file_name="sliced_coco.json",
+        ignore_negative_samples=False,
+        output_dir=dataset_sliced,
+        slice_height=2000,
+        slice_width=2000,
+        overlap_height_ratio=0.2,
+        overlap_width_ratio=0.2,
+        min_area_ratio=0.1,
+        verbose=True
+    )
+    print(len(coco_dict_sliced))
+    print(len(coco_path))
+    print('done')
+
+
 # run with `python -m dataset_generation`
 if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
     pano_training_set()
+    slice_pano_training_set()
