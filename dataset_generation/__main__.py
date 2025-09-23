@@ -118,8 +118,12 @@ def pano_training_set():
                     r = filter_transform_record(row)
                     dst = dataset_path / r['file_name']
                     src = source_img_path / row['panorama_path'].replace('/media', '')
-                    dst.symlink_to(src)
-
+                    if src.is_file():
+                        if not dst.is_file():
+                            dst.symlink_to(src)
+                    else:
+                        print(f'WARNING: skipping missing img at {src}')
+                        continue
                     coco_json_source['images'].append({
                         "height": r['coco_annotations'][0]['image_height'],
                         "width": r['coco_annotations'][0]['image_width'],
@@ -134,7 +138,6 @@ def pano_training_set():
                         "area": None
                     } for v in row['coco_annotations']]
                     coco_json_source['annotations'] += annotations
-
             offset += limit
         else:
             print(f"Error: {response.status_code}")
