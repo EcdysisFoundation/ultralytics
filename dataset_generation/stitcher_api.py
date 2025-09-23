@@ -74,6 +74,7 @@ def filter_transform_record(row):
     # cwd = os.getcwd()
     # file_mount = cwd.replace('ultralytics', 'label-studio/mydata/stitchermedia')
     file_name = row['panorama_path'].replace('/media', '')
+    file_name = file_name.replace('/panorama', '_panorama')
     row['panorama_path'] = FILE_MOUNT + file_name
     coco_annotations = [
         label_studio_to_coco(

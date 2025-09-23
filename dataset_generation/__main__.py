@@ -40,14 +40,11 @@ def single_specimen_trainingset():
 
     db = ObjectDetectData()
     full_data = db.get_full_df()
-
     category_counts = full_data[args.class_col].value_counts()
-
     logger.info('category counts')
     logger.info(category_counts)
 
     check_ok = check_missing_files(full_data, args.test_flag)
-
     if check_ok:
         print(check_ok)
     else:
@@ -76,11 +73,15 @@ def pano_training_set():
     offset = 0
     limit = 10
     curr_dir = os.getcwd()
-    print('curr_dir')
-    print(curr_dir)
-    out_json = curr_dir + '/dataset_pano/dataset.json'
-    print('out_json')
-    print(out_json)
+    print(f'curr_dir: {curr_dir}')
+    curr_dir = os.getcwd()
+    dataset_dir = curr_dir + '/dataset_pano'
+    out_json = dataset_dir + '/dataset.json'
+    print(f'out_json: {out_json}')
+    dataset_path = Path(dataset_dir)
+    source_img_dir = FILE_MOUNT
+    print(f'source_img_dir: {source_img_dir}')
+    source_img_path = Path(source_img_dir)
 
     coco_json_source = {
         "images": [],
@@ -97,7 +98,7 @@ def pano_training_set():
             'limit': limit,
             'approved': True
         }
-        print('-list-upload-files-' * 10)
+        print('-list-upload-files-' * 6)
         print(params)
 
         try:
@@ -115,14 +116,18 @@ def pano_training_set():
             for row in data:
                 if row['annotations']:
                     r = filter_transform_record(row)
+                    dst = dataset_path / r['file_name']
+                    src = source_img_path / row['panorama_path'].replace('/media', '')
+                    dst.symlink_to(src)
+
                     coco_json_source['images'].append({
                         "height": r['coco_annotations'][0]['image_height'],
                         "width": r['coco_annotations'][0]['image_width'],
-                        "id": r['guid'],
+                        "id": int(r['id']),
                         "file_name": r['file_name']})
                     annotations = [{
                         "category_id": 1,
-                        "image_id": r['guid'],
+                        "image_id": int(r['id']),
                         "bbox": (v['x'], v['y'], v['width'], v['height']),
                         "iscrowd": 0,
                         "segmentation": [],
@@ -143,10 +148,8 @@ def slice_pano_training_set():
     curr_dir = os.getcwd()
     dataset_dir = curr_dir + '/dataset_pano'
     dataset_json_path = dataset_dir + '/dataset.json'
-    dataset_sliced = dataset_dir = '/sliced/'
+    dataset_sliced = dataset_dir + '/sliced/'
     print(f'dataset_file_path: {dataset_json_path}')
-    source_img_dir = FILE_MOUNT
-    print(f'source_img_dir: {source_img_dir}')
 
     coco_dict = load_json(dataset_json_path)
     print('coco_dict read, first image is')
@@ -159,9 +162,9 @@ def slice_pano_training_set():
         Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
         print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
-    coco_dict_sliced, coco_path = slice_coco(
+    slice_coco(
         coco_annotation_file_path=dataset_json_path,
-        image_dir=source_img_dir,
+        image_dir=dataset_dir,
         output_coco_annotation_file_name="sliced_coco.json",
         ignore_negative_samples=False,
         output_dir=dataset_sliced,
@@ -172,9 +175,7 @@ def slice_pano_training_set():
         min_area_ratio=0.1,
         verbose=True
     )
-    print(len(coco_dict_sliced))
-    print(len(coco_path))
-    print('done')
+    print('slice_pano_training_set done')
 
 
 # run with `python -m dataset_generation`
