@@ -9,9 +9,11 @@ from pathlib import Path
 from sahi.slicing import slice_coco
 from sahi.utils.file import load_json
 
+from ultralytics.data.converter import convert_coco
+
 from PIL import Image
 
-from .split import split_from_df, DATASETS_FOLDER
+from .split import split_from_df, split_by_labels_train_val, DATASETS_FOLDER
 from .stitcher_api import (
     filter_transform_record, get_root_message,
     ERROR_MSG_KEY, STITCHER_URL, FILE_MOUNT)
@@ -188,3 +190,5 @@ if __name__ == '__main__':
     """
     pano_training_set()
     slice_pano_training_set()
+    convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")
+    split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')

@@ -1,4 +1,5 @@
 import os
+import random
 import logging
 import numpy as np
 import pandas as pd
@@ -62,7 +63,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
         if len(split_img) == 0:
             continue
 
-        parent_i =  dirs['parent_images'] / split_name
+        parent_i = dirs['parent_images'] / split_name
         parent_l = dirs['parent_labels'] / split_name
 
         logger.info(f'Writing images to {parent_i}')
@@ -138,3 +139,44 @@ def split_from_df(
 
     save_yaml_file(DATASETS_FOLDER, class_index)
     return splits
+
+
+def split_by_labels_train_val(label_dir, image_dir):
+    """
+    Using a directory of labelfiles and imgs, structure traing set for one class.
+    DATASETS_FOLDER should have images and labels directories pre-exising and emptied.
+    """
+    print('Starting split_by_labels_train_val')
+    dest_path = Path(DATASETS_FOLDER)
+    label_path = Path(label_dir)
+    img_path = Path(image_dir)
+    img_val = dest_path / 'images/val'
+    img_train = dest_path / 'images/train'
+    label_val = dest_path / 'labels/val'
+    label_train = dest_path / 'labels/train'
+    txt = '.txt'
+
+    def copy_imgs(entries, img_set_path, label_set_path):
+        for a in entries:
+            if a[-4:] == txt:
+                if a.count(txt) > 1:
+                    print(f'WARNING: string assumption wrong, skipping {a}')
+                    continue
+                img_file = a.replace('.txt', '.png')
+
+                try:
+                    copy(img_path / img_file, img_set_path)
+                    copy(label_path / a, label_set_path)
+                except Exception:
+                    print(f'Problem with {a}, will not be included in training')
+                    print(Exception)
+
+    all_entries = os.listdir(label_dir)
+    num_in_validation = int(len(all_entries) * 0.2)
+    val_entries = random.sample(all_entries, num_in_validation)
+    train_entries = [v for v in all_entries if v not in val_entries]
+    copy_imgs(val_entries, img_val, label_val)
+    copy_imgs(train_entries, img_train, label_train)
+    print(f'copied {len(val_entries)} val_entries')
+    print(f'copied {len(train_entries)} train_entries')
+    print('Completed split_by_labels_train_val.')
