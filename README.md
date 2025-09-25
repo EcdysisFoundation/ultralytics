@@ -69,16 +69,19 @@ To resolve `Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is inco
 
 ### Deployment
 
-The trained model is deployed using FastAPI. See https://github.com/EcdysisFoundation/inference-fastapi
+zip the entire dir to download and examine output
 
-Two files are required. 1. The data.yaml renamed to yolo_data.yaml and 2. the model exported to .onnx format, renamed to yolo_best.onnx.
+    tar -zcvf OUTPUTDIR.tar.gz OUTPUTDIR
+
+#### For inference with SAHI
+
+Inference with SAHI requires the ultralytics library. Replace the MODEL_PATH to the model weights in inference.sahi_stitched. And run inference using the __main__.py in the inference module.
+
+#### For inference without SAHI
+The trained model is deployed using FastAPI. See https://github.com/EcdysisFoundation/inference-fastapi. Two files are required. 1. The data.yaml renamed to yolo_data.yaml and 2. the model exported to .onnx format, renamed to yolo_best.onnx.
 
 To export the model, use for exmple
 
     model = YOLO("path/to/best.pt")  # load a custom trained model
 
     model.export(format="onnx")  # export to .onnx format
-
-zip the entire dir to download and examine output
-
-    tar -zcvf OUTPUTDIR.tar.gz OUTPUTDIR
