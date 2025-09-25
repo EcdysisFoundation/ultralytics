@@ -6,12 +6,12 @@ from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
-model_path = 'runs/detect/train4/weights/best.pt'
+MODEL_PATH = 'runs/detect/train5/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
     model_type='ultralytics',
-    model_path=model_path,
+    model_path=MODEL_PATH,
     confidence_threshold=0.3,
     device='cuda:0'  # or 'cpu'
 )
