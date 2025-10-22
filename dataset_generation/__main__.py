@@ -84,6 +84,7 @@ def pano_training_set():
     source_img_dir = FILE_MOUNT
     print(f'source_img_dir: {source_img_dir}')
     source_img_path = Path(source_img_dir)
+    existing_files = os.listdir(dataset_dir)
 
     coco_json_source = {
         "images": [],
@@ -116,7 +117,15 @@ def pano_training_set():
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                if row['annotations']:
+                # TODO: to improve, consider...
+                # this preexists strategy relies on previous symlinks still existing
+                # and ignores what did or did not make it all the way through the process
+                preexists = False
+                for i in existing_files:
+                    if str(row['guid']) in i:
+                        preexists = True
+                        break
+                if row['annotations'] and not preexists:
                     r = filter_transform_record(row)
                     dst = dataset_path / r['file_name']
                     src = source_img_path / row['panorama_path'].replace('/media', '')
@@ -188,7 +197,17 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
-    pano_training_set()
+    # TODO: make a better way to add images to the trainig set that
+    #       uses less storage space and does not require these manual steps
+    #
+    # manual steps:
+    # step 1: ensure symlinks exist
+    # step 2: in /dataset_pano ...
+    #   rm dataset.json
+    #   rm -r coco_converted
+    #   rm -r sliced
+    # step 3: run additional images through the process, adding to train and val datasets
+    pano_training_set()  # see notes there
     slice_pano_training_set()
     convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")
     split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')
