@@ -117,15 +117,7 @@ def pano_training_set():
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                # TODO: to improve, consider...
-                # this preexists strategy relies on previous symlinks still existing
-                # and ignores what did or did not make it all the way through the process
-                preexists = False
-                for i in existing_files:
-                    if str(row['guid']) in i:
-                        preexists = True
-                        break
-                if row['annotations'] and not preexists:
+                if row['annotations']:
                     r = filter_transform_record(row)
                     dst = dataset_path / r['file_name']
                     src = source_img_path / row['panorama_path'].replace('/media', '')
@@ -201,13 +193,8 @@ if __name__ == '__main__':
     #       uses less storage space and does not require these manual steps
     #
     # manual steps:
-    # step 1: ensure symlinks exist
-    # step 2: in /dataset_pano ...
-    #   rm dataset.json
-    #   rm -r coco_converted
-    #   rm -r sliced
-    # step 3: run additional images through the process, adding to train and val datasets
-    pano_training_set()  # see notes there
+    # empty all the directories and redo all
+    pano_training_set()
     slice_pano_training_set()
     convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")
     split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')
