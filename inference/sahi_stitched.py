@@ -6,7 +6,9 @@ from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
-MODEL_PATH = 'runs/detect/train5/weights/best.pt'
+# SAHI INFERENCE FOR OBJECT DETECTION
+
+MODEL_PATH = 'runs/detect/train6/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
