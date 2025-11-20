@@ -1,3 +1,4 @@
+import json
 import os
 import torch
 
@@ -33,7 +34,7 @@ def main():
             p = p.replace('/media', '')
             if os.path.exists(p):
                 print(f'performing inference on {p}')
-                prediction = predict(p)
+                prediction = json.dumps(predict(p))
                 if prediction:
                     put_predictions(api_post_url, d['guid'], prediction)
             else:
