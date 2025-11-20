@@ -2,8 +2,11 @@ import sys
 import logging
 import os
 import pandas as pd
-from pathlib import Path
 import yaml
+
+from pathlib import Path
+from uuid import uuid4
+
 
 logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler(sys.stdout)
@@ -146,3 +149,76 @@ def convert_coco_to_yolo(c):
     height = c['height'] / c['image_height']
 
     return (x_center, y_center, width, height)
+
+
+def convert_ls_polygonlabels_to_coco(points, width, height):
+    """
+    From https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/converter.py#L836
+    Fill in None when ready
+    """
+    annotations = []
+    points_abs = [
+        (x / 100 * width, y / 100 * height) for x, y in points
+    ]
+    x, y = zip(*points_abs)
+
+    annotations.append(
+        {
+            "id": None, # annotation_id,
+            "image_id": None, # image_id,
+            "category_id":None, # category_id,
+            "segmentation": [
+                [coord for point in points_abs for coord in point]
+            ],
+            "bbox": None, # get_polygon_bounding_box(x, y),
+            "ignore": 0,
+            "iscrowd": 0,
+            "area": None, # get_polygon_area(x, y),
+        }
+    )
+    return annotations
+
+
+def convert_coco_segmentation_to_ls(
+    category_id, segmentation, categories, from_name, image_height, image_width, to_name
+):
+    """
+    Modified from https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/imports/coco.py
+     function name = create_segmentation
+    Convert COCO segmentation annotation to Label Studio polygon format.
+
+    COCO segmentation format: flat array of [x1,y1,x2,y2,...] coordinates
+    Label Studio format: array of [x,y] points as percentages
+
+    Args:
+        category_id (int): COCO category ID for this segmentation
+        segmentation (list): Flat list of polygon coordinates [x1,y1,x2,y2,...]
+        categories (dict): Mapping of category_id to category name
+        from_name (str): Control tag name from Label Studio labeling config
+        image_height (int): Height of the source image in pixels
+        image_width (int): Width of the source image in pixels
+        to_name (str): Object name from Label Studio labeling config
+
+    Returns:
+        dict: Label Studio polygon annotation item
+    """
+    label = categories[int(category_id)]
+    # Convert flat array [x1,y1,x2,y2,...] to array of points [[x1,y1],[x2,y2],...]
+    points = [list(x) for x in zip(*[iter(segmentation)] * 2)]
+
+    # Convert absolute coordinates to percentages
+    for i in range(len(points)):
+        points[i][0] = points[i][0] / image_width * 100.0
+        points[i][1] = points[i][1] / image_height * 100.0
+
+    item = {
+        "id": uuid4().hex[0:10],
+        "type": "polygonlabels",
+        "value": {"points": points, "polygonlabels": [label]},
+        "to_name": to_name,
+        "from_name": from_name,
+        "image_rotation": 0,
+        "original_width": image_width,
+        "original_height": image_height,
+    }
+    return item

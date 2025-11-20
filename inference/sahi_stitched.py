@@ -1,12 +1,12 @@
 import os
 import json
-import requests
 
 from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
 # SAHI INFERENCE FOR OBJECT DETECTION
+# Saving as label studio formatted prediction
 
 MODEL_PATH = 'runs/detect/train6/weights/best.pt'
 
@@ -86,24 +86,3 @@ def predict(img_path, save_img_file=False):
 
     return format_result_label_studio(
         coco_result, result.image_width, result.image_height)
-
-
-def put_predictions(stitcher_url, guid, predictions):
-
-    params = {'guid': str(guid)}
-    api_post_url = stitcher_url + 'update-predictions/'
-
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        response = requests.post(api_post_url, params=params, data=predictions, headers=headers)
-        if response:
-            if response.status_code != 200:
-                print(f"Error: {response.status_code}")
-        else:
-            print('Response returned None')
-    except Exception as e:
-        print(e)

@@ -1,15 +1,13 @@
 import os
-import json
-import requests
 
 from sahi.predict import get_sliced_prediction
 from sahi import AutoDetectionModel
 
 
-# SAHI INFERENCE FOR OBJECT DETECTION
+# SAHI INFERENCE FOR SEGMENTATION
 
 
-MODEL_PATH = '/bugmasker_weights.pt'
+MODEL_PATH = 'bugmasker_weights.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
@@ -21,6 +19,7 @@ detection_model = AutoDetectionModel.from_pretrained(
 
 
 def predict(img_path, save_img_file=False):
+    print(f'running prediction on device {detection_model.device}')
     result = get_sliced_prediction(
         img_path,
         detection_model,
@@ -32,7 +31,6 @@ def predict(img_path, save_img_file=False):
 
     coco_result = result.to_coco_predictions(
         image_id=os.path.basename(img_path))
-    print(coco_result)
 
     # optionally save image file
     if save_img_file:
@@ -41,3 +39,5 @@ def predict(img_path, save_img_file=False):
             file_name='testfile',
             hide_labels=True,
             hide_conf=True)
+
+    return coco_result
