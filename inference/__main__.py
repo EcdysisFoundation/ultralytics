@@ -34,9 +34,17 @@ def main():
             p = p.replace('/media', '')
             if os.path.exists(p):
                 print(f'performing inference on {p}')
-                prediction = json.dumps(predict(p))
-                if prediction:
-                    put_predictions(api_post_url, d['guid'], prediction)
+                coco_result, original_width, original_height = predict(p)
+                prediction_result = json.dumps([{
+                    'prediction': coco_result,
+                    'original_width': original_width,
+                    'original_height': original_height
+                }])
+                if coco_result:
+                    put_predictions(
+                        api_post_url,
+                        d['guid'],
+                        prediction_result)
             else:
                 print('path not found')
                 print(p)
