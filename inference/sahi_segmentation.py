@@ -28,10 +28,10 @@ def predict(img_path, save_img_file=False):
         overlap_height_ratio=0.2,
         overlap_width_ratio=0.2,
     )
-
+    original_width = result.image_width
+    original_height = result.image_height
     coco_result = result.to_coco_predictions(
         image_id=os.path.basename(img_path))
-
     # optionally save image file
     if save_img_file:
         result.export_visuals(
@@ -40,4 +40,4 @@ def predict(img_path, save_img_file=False):
             hide_labels=True,
             hide_conf=True)
 
-    return coco_result
+    return coco_result, original_width, original_height
