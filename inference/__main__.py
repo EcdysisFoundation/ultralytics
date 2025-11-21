@@ -36,7 +36,7 @@ def main():
                 print(f'performing inference on {p}')
                 coco_result, original_width, original_height = predict(p)
                 prediction_result = json.dumps([{
-                    'prediction': coco_result,
+                    'predictions': coco_result,
                     'original_width': original_width,
                     'original_height': original_height
                 }])
