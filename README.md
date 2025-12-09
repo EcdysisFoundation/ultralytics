@@ -47,9 +47,7 @@ Can check if the entry still exists by viewing filesystem usage with `df -H`
 
 Using the conda environment, `conda activate ultralytics-ev`
 
-Download a new training selections file to Ecdysis02
-
-`scp ecdysis@ecdysis01.local:/pool1/srv/bugbox3/local_files/obj_det_selections.json ./local_files/obj_det_selections.json`
+Export annotations from label-studio using json-min format.
 
 Run the dataset generation script
 
