@@ -37,7 +37,7 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def single_specimen_trainingset():
+def single_specimen_trainingset(check_missing=True):
     args = get_args()
 
     db = ObjectDetectData()
@@ -46,14 +46,14 @@ def single_specimen_trainingset():
     logger.info('category counts')
     logger.info(category_counts)
 
-    check_ok = check_missing_files(full_data, args.test_flag)
-    if check_ok:
-        print(check_ok)
-    else:
-        print('exiting...........')
-        return
+    if check_missing:
+        check_ok = check_missing_files(full_data, args.test_flag)
+        if check_ok:
+            print(check_ok)
+        else:
+            print('exiting...........')
+            return
 
-    full_data = db.get_full_df()
     full_data['yolo_annotations'] = full_data['object_det_label'].apply(convert_annotation_to_yolo)
     full_data.to_csv('local_files/full_data.csv')
 
