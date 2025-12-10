@@ -1,6 +1,4 @@
 import os
-import json
-import requests
 import sys
 import argparse
 import logging
@@ -15,8 +13,7 @@ from PIL import Image
 
 from .split import split_from_df, split_by_labels_train_val, DATASETS_FOLDER
 from .stitcher_api import (
-    filter_transform_record, get_root_message,
-    ERROR_MSG_KEY, STITCHER_URL, FILE_MOUNT)
+    pano_segmentation_training_set)
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -64,92 +61,6 @@ def single_specimen_trainingset(check_missing=True):
     print('end of main')
 
 
-def pano_training_set():
-
-    api_ping = get_root_message()
-    print(api_ping)
-    if ERROR_MSG_KEY in api_ping.keys():
-        return
-
-    api_list_url = STITCHER_URL + '/list-upload-files/'
-    offset = 0
-    limit = 10
-    curr_dir = os.getcwd()
-    print(f'curr_dir: {curr_dir}')
-    curr_dir = os.getcwd()
-    dataset_dir = curr_dir + '/dataset_pano'
-    out_json = dataset_dir + '/dataset.json'
-    print(f'out_json: {out_json}')
-    dataset_path = Path(dataset_dir)
-    source_img_dir = FILE_MOUNT
-    print(f'source_img_dir: {source_img_dir}')
-    source_img_path = Path(source_img_dir)
-    existing_files = os.listdir(dataset_dir)
-
-    coco_json_source = {
-        "images": [],
-        "categories": [{
-            "supercategory": "Arthropod",
-            "id": 1,
-            "name": "arthropod"}],
-        "annotations": [],
-    }
-
-    while True:
-        params = {
-            'offset': offset,
-            'limit': limit,
-            'approved': True
-        }
-        print('-list-upload-files-' * 6)
-        print(params)
-
-        try:
-            response = requests.get(api_list_url, params=params)
-        except Exception as e:
-            print(e)
-            break
-
-        if response.status_code == 200:
-            data = response.json()
-            if not data:
-                break
-
-            print(f'data returned from api for next {limit} records')
-            for row in data:
-                if row['annotations']:
-                    r = filter_transform_record(row)
-                    dst = dataset_path / r['file_name']
-                    src = source_img_path / row['panorama_path'].replace('/media', '')
-                    if src.is_file():
-                        if not dst.is_file():
-                            dst.symlink_to(src)
-                    else:
-                        print(f'WARNING: skipping missing img at {src}')
-                        continue
-                    coco_json_source['images'].append({
-                        "height": r['coco_annotations'][0]['image_height'],
-                        "width": r['coco_annotations'][0]['image_width'],
-                        "id": int(r['id']),
-                        "file_name": r['file_name']})
-                    annotations = [{
-                        "category_id": 1,
-                        "image_id": int(r['id']),
-                        "bbox": (v['x'], v['y'], v['width'], v['height']),
-                        "iscrowd": 0,
-                        "segmentation": [],
-                        "area": None
-                    } for v in row['coco_annotations']]
-                    coco_json_source['annotations'] += annotations
-            offset += limit
-        else:
-            print(f"Error: {response.status_code}")
-            break
-
-    with open(out_json, 'w') as f:
-        json.dump(coco_json_source, f)  # , indent=1
-
-
 def slice_pano_training_set():
     curr_dir = os.getcwd()
     dataset_dir = curr_dir + '/dataset_pano'
@@ -194,7 +105,7 @@ if __name__ == '__main__':
     #
     # manual steps:
     # empty all the directories and redo all
-    pano_training_set()
+    pano_segmentation_training_set()
     slice_pano_training_set()
     convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")
     split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')

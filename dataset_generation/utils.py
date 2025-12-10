@@ -1,5 +1,6 @@
 import sys
 import logging
+import numpy as np
 import os
 import pandas as pd
 import yaml
@@ -7,11 +8,15 @@ import yaml
 from pathlib import Path
 from uuid import uuid4
 
+from inference.sahi_stitched import label_studio_to_coco
+
 
 logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler(sys.stdout)
 
 logger.setLevel(logging.INFO)
+
+FILE_MOUNT = '/pool1/srv/label-studio/mydata/stitchermedia'
 
 
 def make_yaml_dict(dataset_folder, class_index):
@@ -151,32 +156,52 @@ def convert_coco_to_yolo(c):
     return (x_center, y_center, width, height)
 
 
-def convert_ls_polygonlabels_to_coco(points, width, height):
+def get_polygon_area(x, y):
+    """
+    From https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/utils.py
+    https://en.wikipedia.org/wiki/Shoelace_formula
+
+    """
+
+    assert len(x) == len(y)
+    return float(0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))))
+
+
+def get_polygon_bounding_box(x, y):
+    """
+    From https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/utils.py
+    """
+
+    assert len(x) == len(y)
+    x1, y1, x2, y2 = min(x), min(y), max(x), max(y)
+    return [x1, y1, x2 - x1, y2 - y1]
+
+
+def convert_ls_polygonlabels_to_coco(
+        annotation_id, image_id,
+        points, width, height):
     """
     From https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/converter.py#L836
     Fill in None when ready
     """
-    annotations = []
     points_abs = [
         (x / 100 * width, y / 100 * height) for x, y in points
     ]
     x, y = zip(*points_abs)
 
-    annotations.append(
-        {
-            "id": None, # annotation_id,
-            "image_id": None, # image_id,
-            "category_id":None, # category_id,
-            "segmentation": [
+    return {
+        "id": annotation_id,
+        "image_id": image_id,
+        "category_id": 1,  # single category
+        "segmentation":
+            [
                 [coord for point in points_abs for coord in point]
             ],
-            "bbox": None, # get_polygon_bounding_box(x, y),
-            "ignore": 0,
-            "iscrowd": 0,
-            "area": None, # get_polygon_area(x, y),
-        }
-    )
-    return annotations
+        "bbox": get_polygon_bounding_box(x, y),
+        "ignore": 0,
+        "iscrowd": 0,
+        "area": get_polygon_area(x, y),
+    }
 
 
 def convert_coco_segmentation_to_ls(
@@ -222,3 +247,48 @@ def convert_coco_segmentation_to_ls(
         "original_height": image_height,
     }
     return item
+
+
+def extract_bbox(a):
+    return (a['x'], a['y'], a['width'], a['height'])
+
+
+def filter_transform_record(row):
+    """
+    For object detections, make coco annotations and provide image path.
+    """
+    if not row['annotations']:
+        return
+
+    # replace with FILE_MOUNT for production
+    # use file_mount for local dev
+    # cwd = os.getcwd()
+    # file_mount = cwd.replace('ultralytics', 'label-studio/mydata/stitchermedia')
+    file_name = row['panorama_path'].replace('/media/', '')
+    file_name = file_name.replace('/panorama', '_panorama')
+    panorama_path = row['panorama_path'].replace('/media', '')
+    row['panorama_path'] = FILE_MOUNT + panorama_path
+    coco_annotations = [
+        label_studio_to_coco(
+            extract_bbox(a), a['original_width'], a['original_height']) for a in row['annotations']]
+    row.update({
+        'coco_annotations': coco_annotations,
+        'file_name': file_name
+    })
+    return row
+
+
+def filter_transform_segmentation_record(row, image_id, width, height):
+    """
+    For segmentation, make coco annotations and provide image path.
+    """
+    if not row['annotations_segment']:
+        return
+
+    coco_annotations = [convert_ls_polygonlabels_to_coco(
+        i, image_id,
+        v['points'], width, height) for i, v in enumerate(row['annotations_segment'])]
+    row.update({
+        'coco_annotations': coco_annotations,
+    })
+    return row
