@@ -182,8 +182,8 @@ def pano_segmentation_training_set():
             "name": "arthropod"}],
         "annotations": [],
     }
-    not_done = True
-    while not_done:
+
+    while True:
         params = {
             'offset': offset,
             'limit': limit,
@@ -205,38 +205,36 @@ def pano_segmentation_training_set():
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                # dev, pick one rec.
-                if row['guid'] != 'c23201a2-1d9b-4232-bea4-7aaad383a253':
-                    continue
+                if row['annotations_segment']:
 
-                if row['annotations']:
+                    # set some vars
                     original_width = row['annotations_segment'][0]['original_width']
                     original_height = row['annotations_segment'][0]['original_height']
                     image_id = len(coco_json_source["images"])
+
+                    # prepare the image
+                    file_name = row['panorama_path'].replace('/media/', '')
+                    file_name = file_name.replace('/panorama', '_panorama')
+                    panorama_path = row['panorama_path'].replace('/media', '')
+                    row['panorama_path'] = FILE_MOUNT + panorama_path
+                    dst = dataset_path / file_name
+                    src = source_img_path / row['panorama_path'].replace('/media', '')
+                    if src.is_file():
+                        if not dst.is_file():
+                            dst.symlink_to(src)
+                    else:
+                        print(f'WARNING: skipping missing img at {src}')
+                        continue
+
+                    # convert and format the annotations and other info
                     r = filter_transform_segmentation_record(row, image_id, original_width, original_height)
-                    #dst = dataset_path / r['file_name']
-                    #src = source_img_path / row['panorama_path'].replace('/media', '')
-
-                    # temp for testing
-                    file_name = str(row['guid']) + '_panorama.jpg'
-                    # end temp for testing, get from row instead
-
-                    #if src.is_file():
-                    ##    if not dst.is_file():
-                    #        dst.symlink_to(src)
-                    #else:
-                    #    print(f'WARNING: skipping missing img at {src}')
-                    #    continue
                     coco_json_source['images'].append({
                         "height": original_height,
                         "width": original_width,
                         "id": image_id,
                         "file_name": file_name})
-
                     coco_json_source['annotations'] += r['coco_annotations']
-                    not_done = False
-                    if not not_done:
-                        print('stopping early')
+
             offset += limit
         else:
             print(f"Error: {response.status_code}")
