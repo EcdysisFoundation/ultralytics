@@ -104,7 +104,8 @@ if __name__ == '__main__':
     #       uses less storage space and does not require these manual steps
     #
     # manual steps:
-    # empty all the directories and redo all
+    # empty dataset_pano
+    # coco_converted gets created as coco_converted2 if it already exists, which doesnt work when they are hardcoded below.
     pano_segmentation_training_set()
     slice_pano_training_set()
     convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")

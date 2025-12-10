@@ -3,7 +3,7 @@ from ultralytics import YOLO
 
 if __name__ == '__main__':
 
-    model = YOLO('runs/detect/train5/weights/best.pt')
+    model = YOLO('fb_M_2025-11-10.pt')
     model.train(
         data='datasets/data.yaml',
         epochs=300,
