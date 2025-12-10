@@ -7,7 +7,7 @@ from sahi import AutoDetectionModel
 # SAHI INFERENCE FOR SEGMENTATION
 
 
-MODEL_PATH = 'bugmasker_weights.pt'
+MODEL_PATH = 'fb_M_2025-11-10.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(

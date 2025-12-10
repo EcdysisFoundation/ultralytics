@@ -1,13 +1,18 @@
-# import os
+import json
+import os
 import requests
+from pathlib import Path
 
-from inference.sahi_stitched import label_studio_to_coco
+from dataset_generation.utils import (
+    filter_transform_record,
+    filter_transform_segmentation_record,
+    FILE_MOUNT
+)
 
 # local dev
 # STITCHER_URL = 'http://localhost:8090'
 # production url
 STITCHER_URL = 'http://ecdysis01.local:8090'
-FILE_MOUNT = '/pool1/srv/label-studio/mydata/stitchermedia'
 
 ERROR_MSG_KEY = 'ERROR'
 
@@ -61,27 +66,179 @@ def get_root_message():
         return {ERROR_MSG_KEY: e}
 
 
-def extract_bbox(a):
-    return (a['x'], a['y'], a['width'], a['height'])
+def pano_training_set():
+    """
+    Potentially broken, moved here after previous use.
+    For object detection SAHI training set
+    """
 
-
-def filter_transform_record(row):
-    if not row['annotations']:
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
         return
 
-    # replace with FILE_MOUNT for production
-    # use file_mount for local dev
-    # cwd = os.getcwd()
-    # file_mount = cwd.replace('ultralytics', 'label-studio/mydata/stitchermedia')
-    file_name = row['panorama_path'].replace('/media/', '')
-    file_name = file_name.replace('/panorama', '_panorama')
-    panorama_path = row['panorama_path'].replace('/media', '')
-    row['panorama_path'] = FILE_MOUNT + panorama_path
-    coco_annotations = [
-        label_studio_to_coco(
-            extract_bbox(a), a['original_width'], a['original_height']) for a in row['annotations']]
-    row.update({
-        'coco_annotations': coco_annotations,
-        'file_name': file_name
-    })
-    return row
+    api_list_url = STITCHER_URL + '/list-upload-files/'
+    offset = 0
+    limit = 10
+    curr_dir = os.getcwd()
+    print(f'curr_dir: {curr_dir}')
+    curr_dir = os.getcwd()
+    dataset_dir = curr_dir + '/dataset_pano'
+    out_json = dataset_dir + '/dataset.json'
+    print(f'out_json: {out_json}')
+    dataset_path = Path(dataset_dir)
+    source_img_dir = FILE_MOUNT
+    print(f'source_img_dir: {source_img_dir}')
+    source_img_path = Path(source_img_dir)
+
+    coco_json_source = {
+        "images": [],
+        "categories": [{
+            "supercategory": "Arthropod",
+            "id": 1,
+            "name": "arthropod"}],
+        "annotations": [],
+    }
+
+    while True:
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+        print('-list-upload-files-' * 6)
+        print(params)
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+
+            print(f'data returned from api for next {limit} records')
+            for row in data:
+                if row['annotations']:
+                    r = filter_transform_record(row)
+                    dst = dataset_path / r['file_name']
+                    src = source_img_path / row['panorama_path'].replace('/media', '')
+                    if src.is_file():
+                        if not dst.is_file():
+                            dst.symlink_to(src)
+                    else:
+                        print(f'WARNING: skipping missing img at {src}')
+                        continue
+                    coco_json_source['images'].append({
+                        "height": r['coco_annotations'][0]['image_height'],
+                        "width": r['coco_annotations'][0]['image_width'],
+                        "id": int(r['id']),
+                        "file_name": r['file_name']})
+                    annotations = [{
+                        "category_id": 1,
+                        "image_id": int(r['id']),
+                        "bbox": (v['x'], v['y'], v['width'], v['height']),
+                        "iscrowd": 0,
+                        "segmentation": [],
+                        "area": None
+                    } for v in row['coco_annotations']]
+                    coco_json_source['annotations'] += annotations
+            offset += limit
+        else:
+            print(f"Error: {response.status_code}")
+            break
+
+    with open(out_json, 'w') as f:
+        json.dump(coco_json_source, f)  # , indent=1
+
+
+def pano_segmentation_training_set():
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
+        return
+    api_list_url = STITCHER_URL + '/list-upload-files/'
+    offset = 0
+    limit = 10
+    curr_dir = os.getcwd()
+    print(f'curr_dir: {curr_dir}')
+    curr_dir = os.getcwd()
+    dataset_dir = curr_dir + '/dataset_pano'
+    out_json = dataset_dir + '/dataset.json'
+    print(f'out_json: {out_json}')
+    dataset_path = Path(dataset_dir)
+    source_img_dir = FILE_MOUNT
+    print(f'source_img_dir: {source_img_dir}')
+    source_img_path = Path(source_img_dir)
+
+    coco_json_source = {
+        "images": [],
+        "categories": [{
+            "supercategory": "Arthropod",
+            "id": 1,
+            "name": "arthropod"}],
+        "annotations": [],
+    }
+
+    while True:
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+        print('-list-upload-files-' * 6)
+        print(params)
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+
+            print(f'data returned from api for next {limit} records')
+            for row in data:
+                if row['annotations_segment']:
+
+                    # set some vars
+                    original_width = row['annotations_segment'][0]['original_width']
+                    original_height = row['annotations_segment'][0]['original_height']
+                    image_id = len(coco_json_source["images"])
+
+                    # prepare the image
+                    file_name = row['panorama_path'].replace('/media/', '')
+                    file_name = file_name.replace('/panorama', '_panorama')
+                    panorama_path = row['panorama_path'].replace('/media', '')
+                    row['panorama_path'] = FILE_MOUNT + panorama_path
+                    dst = dataset_path / file_name
+                    src = source_img_path / row['panorama_path'].replace('/media', '')
+                    if src.is_file():
+                        if not dst.is_file():
+                            dst.symlink_to(src)
+                    else:
+                        print(f'WARNING: skipping missing img at {src}')
+                        continue
+
+                    # convert and format the annotations and other info
+                    r = filter_transform_segmentation_record(row, image_id, original_width, original_height)
+                    coco_json_source['images'].append({
+                        "height": original_height,
+                        "width": original_width,
+                        "id": image_id,
+                        "file_name": file_name})
+                    coco_json_source['annotations'] += r['coco_annotations']
+
+            offset += limit
+        else:
+            print(f"Error: {response.status_code}")
+            break
+
+    with open(out_json, 'w') as f:
+        json.dump(coco_json_source, f)  # , indent=1

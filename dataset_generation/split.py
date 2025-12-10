@@ -30,10 +30,10 @@ def create_clear_dirs():
 
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
-        i =  parent_images / name
+        i = parent_images / name
         i.mkdir(parents=True)
-        l = parent_labels / name
-        l.mkdir(parents=True)
+        ld = parent_labels / name
+        ld.mkdir(parents=True)
 
     return {
         'parent_images': parent_images,
