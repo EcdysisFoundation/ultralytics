@@ -144,8 +144,8 @@ def split_from_df(
 def split_by_labels_train_val(label_dir, image_dir):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
-    DATASETS_FOLDER should have images and labels directories pre-exising and emptied.
     """
+    create_clear_dirs()
     print('Starting split_by_labels_train_val')
     dest_path = Path(DATASETS_FOLDER)
     label_path = Path(label_dir)
