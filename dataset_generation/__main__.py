@@ -108,5 +108,9 @@ if __name__ == '__main__':
     # coco_converted gets created as coco_converted2 if it already exists, which doesnt work when they are hardcoded below.
     pano_segmentation_training_set()
     slice_pano_training_set()
-    convert_coco("dataset_pano/sliced/", cls91to80=False, save_dir="dataset_pano/coco_converted")
+    convert_coco(
+        "dataset_pano/sliced/",
+        cls91to80=False,
+        save_dir="dataset_pano/coco_converted",
+        use_segments=True)
     split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')
