@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def create_clear_dirs():
+def create_clear_dirs(dataset_pano=False):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
@@ -27,6 +27,11 @@ def create_clear_dirs():
         shutil.rmtree(parent_images)
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
+    if dataset_pano:
+        dp_path = Path('dataset_pano')
+        if os.path.exists(dp_path):
+            shutil.rmtree(dp_path)
+        dp_path.mkdir()
 
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
@@ -145,7 +150,6 @@ def split_by_labels_train_val(label_dir, image_dir):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
     """
-    create_clear_dirs()
     print('Starting split_by_labels_train_val')
     dest_path = Path(DATASETS_FOLDER)
     label_path = Path(label_dir)
