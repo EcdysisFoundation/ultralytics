@@ -11,7 +11,7 @@ from ultralytics.data.converter import convert_coco
 
 from PIL import Image
 
-from .split import split_from_df, split_by_labels_train_val, DATASETS_FOLDER
+from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
 from .stitcher_api import (
     pano_segmentation_training_set)
 from .data import ObjectDetectData
@@ -100,12 +100,7 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
-    # TODO: make a better way to add images to the trainig set that
-    #       uses less storage space and does not require these manual steps
-    #
-    # manual steps:
-    # empty dataset_pano
-    # coco_converted gets created as coco_converted2 if it already exists, which doesnt work when they are hardcoded below.
+    create_clear_dirs(dataset_pano=True)
     pano_segmentation_training_set()
     slice_pano_training_set()
     convert_coco(
