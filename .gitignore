@@ -13,8 +13,7 @@ datasets/data.yaml
 *.csv
 last_training.log
 stitcher_dir
-dataset_pano/*
-!dataset_pano/__init__.py
+dataset_pano
 
 ##################
 # default stuff below
