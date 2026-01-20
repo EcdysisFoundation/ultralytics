@@ -182,7 +182,6 @@ def convert_ls_polygonlabels_to_coco(
         points, width, height):
     """
     From https://github.com/HumanSignal/label-studio-sdk/blob/master/src/label_studio_sdk/converter/converter.py#L836
-    Fill in None when ready
     """
     points_abs = [
         (x / 100 * width, y / 100 * height) for x, y in points

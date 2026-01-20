@@ -7,7 +7,7 @@ from sahi import AutoDetectionModel
 # SAHI INFERENCE FOR SEGMENTATION
 
 
-MODEL_PATH = 'fb_M_2025-11-10.pt'
+MODEL_PATH = 'runs/segment/train/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
