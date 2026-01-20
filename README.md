@@ -1,14 +1,12 @@
+## Ultralytics and SAHI
+
+This repo tracks code we use with Ultrlaytics primarly for image segmentation using Slicing Aided Hyper Inference for large panoramas. (see https://github.com/obss/sahi ). These panoramas are generated on our Stitcher api (see https://github.com/EcdysisFoundation/stitcher ). Dataset generation and inference uses this api to access images. We use segmentation to identify arthropods in the panorama, and we then in later proceses later crop those out and run our classification model on them, using https://github.com/EcdysisFoundation/metaformer_ecdysis .
 
 ### The environment
 
 https://docs.ultralytics.com/guides/conda-quickstart/
-Using alternative approaches known to cause problems. This works on Unbuntu and Nvidia's Cuda. Pip versions may not.
 
 `conda create --name ultralytics-ev python=3.11 -y`
-
-If using .zsh on mac
-
-`conda init zsh` then close and reopen shell
 
 Activatae environment
 
@@ -22,7 +20,7 @@ Install for local dev, without Nvidia GPUs
 
 `conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn`
 
-Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. To avoid problems with Ultralytics, try to only try to use the libraries it includes and those included above. If any other libraries are added, they need to be tested and documented here.
+Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. To avoid problems with Ultralytics, try to only try to use the libraries it includes and those included above.
 
 Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale with YOLO.
 
@@ -30,7 +28,7 @@ Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale wit
 
 ### Symlink image files
 
-The images are accessed through symlinks created during dataset generation. The drive location on Ecdysis01 needs to be mapped for this to work. This is done with the following command, and will need to be re-linked after a system reboot. For new mounts, first make a directory locally where the external mount will exist (second argument).
+We use symlinks to access images over a local private netwrok. For new mounts, first make a directory locally where the external mount will exist (second argument).
 
 bugbox3
 
@@ -45,7 +43,7 @@ Can check if the entry still exists by viewing filesystem usage with `df -H`
 
 ### Dataset Generation
 
-Using the conda environment, `conda activate ultralytics-ev`
+We annotation our panorama images with label-studio to make a training dataset. (see https://labelstud.io/ )
 
 Export annotations from label-studio using json-min format.
 
