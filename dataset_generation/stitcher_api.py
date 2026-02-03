@@ -205,7 +205,7 @@ def pano_segmentation_training_set():
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                if row['annotations_segment']:
+                if row['annotations_segment'] and not row['omit_from_training']:
 
                     # set some vars
                     original_width = row['annotations_segment'][0]['original_width']
@@ -241,4 +241,4 @@ def pano_segmentation_training_set():
             break
 
     with open(out_json, 'w') as f:
-        json.dump(coco_json_source, f)  # , indent=1
+        json.dump(coco_json_source, f)
