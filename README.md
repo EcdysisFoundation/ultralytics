@@ -8,7 +8,7 @@ https://docs.ultralytics.com/guides/conda-quickstart/
 
 `conda create --name ultralytics-ev python=3.11 -y`
 
-Activatae environment
+Activate environment
 
 `conda activate ultralytics-ev`
 
