@@ -100,12 +100,14 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
+    coco_conv_dir = 'dataset_pano/coco_converted'
+    slice_dir = 'dataset_pano/sliced/'
     create_clear_dirs(dataset_pano=True)
     pano_segmentation_training_set()
     slice_pano_training_set()
     convert_coco(
-        "dataset_pano/sliced/",
+        slice_dir,
         cls91to80=False,
-        save_dir="dataset_pano/coco_converted",
+        save_dir=coco_conv_dir,
         use_segments=True)
-    split_by_labels_train_val('dataset_pano/coco_converted/labels/sliced_coco.json_coco', 'dataset_pano/sliced')
+    split_by_labels_train_val(f'{coco_conv_dir}/labels/sliced_coco.json_coco', slice_dir)
