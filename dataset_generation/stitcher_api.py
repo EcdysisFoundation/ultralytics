@@ -66,7 +66,7 @@ def get_root_message():
         return {ERROR_MSG_KEY: e}
 
 
-def pano_training_set():
+def pano_object_detection_training_set():
     """
     Potentially broken, moved here after previous use.
     For object detection SAHI training set
@@ -155,7 +155,13 @@ def pano_training_set():
         json.dump(coco_json_source, f)  # , indent=1
 
 
-def pano_segmentation_training_set():
+def pano_segmentation_training_set(anno_size_gte=50):
+    """
+    Use the api and get .json file of training set.
+    anno_size_gte, if not None, filters annotations to have
+    at least a width and height of the bounding box in
+    # of anno_size_gte pixels.
+    """
     api_ping = get_root_message()
     print(api_ping)
     if ERROR_MSG_KEY in api_ping.keys():
@@ -233,7 +239,9 @@ def pano_segmentation_training_set():
                         continue
 
                     # convert and format the annotations and other info
-                    r = filter_transform_segmentation_record(row, image_id, original_width, original_height)
+                    r = filter_transform_segmentation_record(
+                        row, image_id, original_width, original_height,
+                        anno_size_gte)
                     coco_json_source['images'].append({
                         "height": original_height,
                         "width": original_width,
