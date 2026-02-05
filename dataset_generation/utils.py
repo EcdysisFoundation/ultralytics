@@ -277,7 +277,7 @@ def filter_transform_record(row):
     return row
 
 
-def filter_transform_segmentation_record(row, image_id, width, height):
+def filter_transform_segmentation_record(row, image_id, width, height, anno_size_gte):
     """
     For segmentation, make coco annotations and provide image path.
     """
@@ -287,6 +287,11 @@ def filter_transform_segmentation_record(row, image_id, width, height):
     coco_annotations = [convert_ls_polygonlabels_to_coco(
         i, image_id,
         v['points'], width, height) for i, v in enumerate(row['annotations_segment'])]
+    if anno_size_gte:
+        # filter out small annotations
+        coco_annotations = [
+            v for v in coco_annotations if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
+        ]
     row.update({
         'coco_annotations': coco_annotations,
     })
