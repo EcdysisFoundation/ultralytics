@@ -30,20 +30,16 @@ Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale wit
 
 We use symlinks to access images over a local private netwrok. For new mounts, first make a directory locally where the external mount will exist (second argument).
 
-bugbox3
+localserver sshfs
 
-`sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/bugbox3/bugbox3/media/ /pool1/srv/bugbox3/bugbox3/media/ -o allow_other`
-
-stitcher
-
-`sudo sshfs ecdysis@ecdysis01.local:/pool1/srv/label-studio/mydata/stitchermedia /pool1/srv/label-studio/mydata/stitchermedia -o allow_other`
+`sudo sshfs user@localserver:/path_to/media/ /path_to/media/ -o allow_other`
 
 Can check if the entry still exists by viewing filesystem usage with `df -H`
 
 
 ### Dataset Generation
 
-We annotation our panorama images with label-studio to make a training dataset. (see https://labelstud.io/ )
+We annotate our panorama images with label-studio to make a training dataset. (see https://labelstud.io/ )
 
 Export annotations from label-studio using json-min format.
 
