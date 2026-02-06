@@ -23,9 +23,7 @@ def main():
     anno_size_gte = 50  # limits minimum annotation bbox size
 
     dont_overwrite = False
-    send_these = [
-        # list namecodes here
-    ]
+    send_these = []  # example [str(i) for i in range(4111, 4131)]
 
     for d in all_data:
         # we use a name convention in first for characters, filter those
@@ -39,6 +37,9 @@ def main():
             if os.path.exists(p):
                 print(f'performing inference on {p}')
                 coco_result, original_width, original_height = predict(p)
+                # filter missing bbox
+                coco_result = [v for v in coco_result if v['bbox']]
+                # filter based on bbox size
                 coco_result = [
                     v for v in coco_result if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
                 ]
