@@ -20,11 +20,15 @@ def main():
 
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
     api_post_url = STITCHER_URL + 'update-predictions-coco/'
+    anno_size_gte = 50  # limits minimum annotation bbox size
 
-    dont_overwrite = True
-    send_these = ['4056', '4062', '4063', '4065', '4067']  # site numbers
+    dont_overwrite = False
+    send_these = [
+        # list namecodes here
+    ]
 
     for d in all_data:
+        # we use a name convention in first for characters, filter those
         if d['upload_dir_name'][:4] not in send_these:
             continue
         if d['panorama_path']:
@@ -35,6 +39,9 @@ def main():
             if os.path.exists(p):
                 print(f'performing inference on {p}')
                 coco_result, original_width, original_height = predict(p)
+                coco_result = [
+                    v for v in coco_result if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
+                ]
                 prediction_result = json.dumps([{
                     'predictions': coco_result,
                     'original_width': original_width,

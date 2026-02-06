@@ -7,7 +7,7 @@ from sahi import AutoDetectionModel
 # SAHI INFERENCE FOR SEGMENTATION
 
 
-MODEL_PATH = 'runs/segment/train/weights/best.pt'
+MODEL_PATH = 'runs/segment/train2/weights/best.pt'
 
 
 detection_model = AutoDetectionModel.from_pretrained(
@@ -34,9 +34,11 @@ def predict(img_path, save_img_file=False):
         image_id=os.path.basename(img_path))
     # optionally save image file
     if save_img_file:
+        combined_path_filename = img_path.replace('/panorama', '_panorama')
+        filename = os.path.splitext(os.path.basename(combined_path_filename))[0]
         result.export_visuals(
-            export_dir="local_files/testing/",
-            file_name='testfile',
+            export_dir="local_files/output/",
+            file_name=filename,
             hide_labels=True,
             hide_conf=True)
 
