@@ -6,25 +6,21 @@ This repo tracks code we use with Ultrlaytics primarly for image segmentation us
 
 https://docs.ultralytics.com/guides/conda-quickstart/
 
-`conda create --name ultralytics-ev python=3.11 -y`
+`conda create --name ultralytics python=3.11 -y`
 
 Activate environment
 
-`conda activate ultralytics-ev`
+`conda activate ultralytics`
 
-Install for Cuda
+Install for Cuda, prioritize source as pytorch, nvidia, conda-forge
 
-`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=11.8 ultralytics scikit-learn`
+`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=11.8 ultralytics scikit-learn sahi scikit-image`
 
 Install for local dev, without Nvidia GPUs
 
-`conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn`
+`conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn sahi scikit-image`
 
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. To avoid problems with Ultralytics, try to only try to use the libraries it includes and those included above.
-
-Add library for SAHI: Slicing Aided Hyper Inference. Known to be compatibale with YOLO.
-
-`conda install sahi scikit-image -c conda-forge`
 
 ### Symlink image files
 
