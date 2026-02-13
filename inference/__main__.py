@@ -23,11 +23,13 @@ def main():
     anno_size_gte = 50  # limits minimum annotation bbox size
 
     dont_overwrite = False
-    send_these = []  # example [str(i) for i in range(4111, 4131)]
+    send_these_sites = []  # send based on sitecode example [str(i) for i in range(4111, 4131)]
+    send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
     for d in all_data:
         # we use a name convention in first for characters, filter those
-        if d['upload_dir_name'][:4] not in send_these:
+        if d['upload_dir_name'][:4] not in send_these_sites \
+                or d['upload_dir_name'] not in send_these_panos:
             continue
         if d['panorama_path']:
             if dont_overwrite and d['predictions_coco']:
