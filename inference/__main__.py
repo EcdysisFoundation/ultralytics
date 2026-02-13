@@ -29,7 +29,7 @@ def main():
     for d in all_data:
         # we use a name convention in first for characters, filter those
         if d['upload_dir_name'][:4] not in send_these_sites \
-                or d['upload_dir_name'] not in send_these_panos:
+                and d['upload_dir_name'] not in send_these_panos:
             continue
         if d['panorama_path']:
             if dont_overwrite and d['predictions_coco']:
