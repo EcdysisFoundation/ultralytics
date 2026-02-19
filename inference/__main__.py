@@ -1,6 +1,7 @@
 import json
 import os
 import torch
+from pathlib import Path
 
 from .dataset import get_stitcher_data
 from .sahi_segmentation import predict
@@ -60,7 +61,10 @@ def main():
                             d['guid'],
                             prediction_result)
                 if save_labeling_files:
-                    save_labeling_img(p, label_img_dir)
+                    img_filename = str(Path(p).name)
+                    new_filename_path = Path(f'{d['guid']}__{img_filename}')
+                    full_img_save_path = str(Path(label_img_dir) / new_filename_path)
+                    save_labeling_img(p, full_img_save_path)
                     # add function to convert predictions to files.json here
 
             else:
