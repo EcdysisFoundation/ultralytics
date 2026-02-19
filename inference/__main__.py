@@ -4,7 +4,7 @@ import torch
 
 from .dataset import get_stitcher_data
 from .sahi_segmentation import predict
-from .utils import put_predictions
+from .utils import put_predictions, save_labeling_img
 
 
 STITCHER_URL = 'http://ecdysis01.local:8090/'
@@ -19,8 +19,11 @@ def main():
     all_data = get_stitcher_data(STITCHER_URL)
 
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
+    label_img_dir = '/pool1/srv/label-studio/mydata/labeling_files'
     api_post_url = STITCHER_URL + 'update-predictions-coco/'
     anno_size_gte = 50  # limits minimum annotation bbox size
+    save_predictions_to_db = True
+    save_labeling_files = True
 
     dont_overwrite = False
     send_these_sites = []  # send based on sitecode example [str(i) for i in range(4111, 4131)]
@@ -29,7 +32,7 @@ def main():
     for d in all_data:
         # we use a name convention in first for characters, filter those
         if d['upload_dir_name'][:4] not in send_these_sites \
-                or d['upload_dir_name'] not in send_these_panos:
+                and d['upload_dir_name'] not in send_these_panos:
             continue
         if d['panorama_path']:
             if dont_overwrite and d['predictions_coco']:
@@ -45,16 +48,21 @@ def main():
                 coco_result = [
                     v for v in coco_result if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
                 ]
-                prediction_result = json.dumps([{
-                    'predictions': coco_result,
-                    'original_width': original_width,
-                    'original_height': original_height
-                }])
-                if coco_result:
-                    put_predictions(
-                        api_post_url,
-                        d['guid'],
-                        prediction_result)
+                if save_predictions_to_db:
+                    prediction_result = json.dumps([{
+                        'predictions': coco_result,
+                        'original_width': original_width,
+                        'original_height': original_height
+                    }])
+                    if coco_result:
+                        put_predictions(
+                            api_post_url,
+                            d['guid'],
+                            prediction_result)
+                if save_labeling_files:
+                    save_labeling_img(p, label_img_dir)
+                    # add function to convert predictions to files.json here
+
             else:
                 print('path not found')
                 print(p)
