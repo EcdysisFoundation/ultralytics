@@ -62,7 +62,7 @@ def main():
                             prediction_result)
                 if save_labeling_files:
                     img_filename = str(Path(p).name)
-                    new_filename_path = Path(f'{d['guid']}__{img_filename}')
+                    new_filename_path = Path(f"{d['guid']}__{img_filename}")
                     full_img_save_path = str(Path(label_img_dir) / new_filename_path)
                     save_labeling_img(p, full_img_save_path)
                     # add function to convert predictions to files.json here
