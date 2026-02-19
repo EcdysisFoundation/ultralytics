@@ -1,4 +1,7 @@
+import cv2
 import requests
+from math import sqrt
+from pathlib import Path
 
 
 def put_predictions(api_post_url, guid, predictions):
@@ -23,3 +26,41 @@ def put_predictions(api_post_url, guid, predictions):
             print('Response returned None')
     except Exception as e:
         print(e)
+
+
+def save_labeling_img(path, label_img_dir):
+    """
+    Resizes for labeling app, below Decompression Bomb threshold.
+    Saves to labeling directory even if not resized.
+    """
+
+    try:
+        img = cv2.imread(path)
+    except cv2.error as e:
+        print(f"Error loading image: {e}")
+        img = None
+    if img is None:
+        raise FileNotFoundError(f"Could not read image: {path}")
+
+    full_labeling_path = str(Path(label_img_dir) / Path(path).name)
+
+    max_pixels = 128_000_000  # Decompression Bomb warning threshold
+    margin = 0.95
+    target_pixels = margin * max_pixels
+
+    h, w = img.shape[:2]
+    pixels = w * h
+    print(f'img pixels are {pixels}')
+    if pixels > target_pixels:
+        print(f'resizing {path}')
+        scale = sqrt(target_pixels / pixels)
+        new_width = max(1, int(w * scale))
+        new_height = max(1, int(h * scale))
+        resized = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+        success = cv2.imwrite(full_labeling_path, resized)
+    else:
+        success = cv2.imwrite(full_labeling_path, img)
+
+    if not success:
+        raise IOError(f"Could not write image: {full_labeling_path}")
+    return
