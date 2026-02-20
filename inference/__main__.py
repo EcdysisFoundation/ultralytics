@@ -41,10 +41,10 @@ def main():
                 continue
             if d['panorama_path']:
                 if dont_overwrite and d['predictions_coco']:
-                    print(f'dont_overwrite enabled, skipping {d['upload_dir_name']} has predictions')
+                    print(f"dont_overwrite enabled, skipping {d['upload_dir_name']} has predictions")
                     continue
                 if skip_if_annotations and d['annotations_segment']:
-                    print(f'skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations')
+                    print(f"skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations")
                     continue
                 p = file_mount + d['panorama_path']
                 p = p.replace('/media', '')
