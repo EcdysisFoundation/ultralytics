@@ -24,6 +24,7 @@ def main():
     api_post_url = STITCHER_URL + 'update-predictions-coco/'
     anno_size_gte = 50  # limits minimum annotation bbox size
     save_predictions_to_db = True
+    skip_if_annotations = True
     save_labeling_files = True
 
     dont_overwrite = False
@@ -37,6 +38,10 @@ def main():
             continue
         if d['panorama_path']:
             if dont_overwrite and d['predictions_coco']:
+                print(f'dont_overwrite enabled, skipping {d['upload_dir_name']} has predictions')
+                continue
+            if skip_if_annotations and d['annotations_segment']:
+                print(f'skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations')
                 continue
             p = file_mount + d['panorama_path']
             p = p.replace('/media', '')
@@ -65,7 +70,7 @@ def main():
                     new_filename_path = Path(f"{d['guid']}__{img_filename}")
                     full_img_save_path = str(Path(label_img_dir) / new_filename_path)
                     save_labeling_img(p, full_img_save_path)
-                    # add function to convert predictions to files.json here
+                    # add function to convert predictions to files.json here to add them as object store
 
             else:
                 print('path not found')
