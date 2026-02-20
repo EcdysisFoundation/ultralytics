@@ -31,8 +31,8 @@ def main():
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
     all_filters = send_these_sites + send_these_panos
-    for d in all_filters:
-        filtered_data = get_stitcher_data(STITCHER_URL)
+    for site_or_dir in all_filters:
+        filtered_data = get_stitcher_data(STITCHER_URL, site_or_dir)
 
         for d in filtered_data:
             # we use a name convention in first for characters, filter those
