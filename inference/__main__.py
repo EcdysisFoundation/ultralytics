@@ -17,7 +17,6 @@ def main():
     """
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
-    all_data = get_stitcher_data(STITCHER_URL)
 
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
     label_img_dir = '/pool1/srv/label-studio/mydata/labeling_files'
@@ -31,50 +30,54 @@ def main():
     send_these_sites = []  # send based on sitecode example [str(i) for i in range(4111, 4131)]
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
-    for d in all_data:
-        # we use a name convention in first for characters, filter those
-        if d['upload_dir_name'][:4] not in send_these_sites \
-                and d['upload_dir_name'] not in send_these_panos:
-            continue
-        if d['panorama_path']:
-            if dont_overwrite and d['predictions_coco']:
-                print(f'dont_overwrite enabled, skipping {d['upload_dir_name']} has predictions')
-                continue
-            if skip_if_annotations and d['annotations_segment']:
-                print(f'skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations')
-                continue
-            p = file_mount + d['panorama_path']
-            p = p.replace('/media', '')
-            if os.path.exists(p):
-                print(f'performing inference on {p}')
-                coco_result, original_width, original_height = predict(p)
-                # filter missing bbox
-                coco_result = [v for v in coco_result if v['bbox']]
-                # filter based on bbox size
-                coco_result = [
-                    v for v in coco_result if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
-                ]
-                if save_predictions_to_db:
-                    prediction_result = json.dumps([{
-                        'predictions': coco_result,
-                        'original_width': original_width,
-                        'original_height': original_height
-                    }])
-                    if coco_result:
-                        put_predictions(
-                            api_post_url,
-                            d['guid'],
-                            prediction_result)
-                if save_labeling_files:
-                    img_filename = str(Path(p).name)
-                    new_filename_path = Path(f"{d['guid']}__{img_filename}")
-                    full_img_save_path = str(Path(label_img_dir) / new_filename_path)
-                    save_labeling_img(p, full_img_save_path)
-                    # add function to convert predictions to files.json here to add them as object store
+    all_filters = send_these_sites + send_these_panos
+    for d in all_filters:
+        filtered_data = get_stitcher_data(STITCHER_URL)
 
-            else:
-                print('path not found')
-                print(p)
+        for d in filtered_data:
+            # we use a name convention in first for characters, filter those
+            if d['upload_dir_name'][:4] not in send_these_sites \
+                    and d['upload_dir_name'] not in send_these_panos:
+                continue
+            if d['panorama_path']:
+                if dont_overwrite and d['predictions_coco']:
+                    print(f'dont_overwrite enabled, skipping {d['upload_dir_name']} has predictions')
+                    continue
+                if skip_if_annotations and d['annotations_segment']:
+                    print(f'skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations')
+                    continue
+                p = file_mount + d['panorama_path']
+                p = p.replace('/media', '')
+                if os.path.exists(p):
+                    print(f'performing inference on {p}')
+                    coco_result, original_width, original_height = predict(p)
+                    # filter missing bbox
+                    coco_result = [v for v in coco_result if v['bbox']]
+                    # filter based on bbox size
+                    coco_result = [
+                        v for v in coco_result if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
+                    ]
+                    if save_predictions_to_db:
+                        prediction_result = json.dumps([{
+                            'predictions': coco_result,
+                            'original_width': original_width,
+                            'original_height': original_height
+                        }])
+                        if coco_result:
+                            put_predictions(
+                                api_post_url,
+                                d['guid'],
+                                prediction_result)
+                    if save_labeling_files:
+                        img_filename = str(Path(p).name)
+                        new_filename_path = Path(f"{d['guid']}__{img_filename}")
+                        full_img_save_path = str(Path(label_img_dir) / new_filename_path)
+                        save_labeling_img(p, full_img_save_path)
+                        # add function to convert predictions to files.json here to add them as object store
+
+                else:
+                    print('path not found')
+                    print(p)
 
 
 if __name__ == '__main__':

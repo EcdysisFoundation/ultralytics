@@ -1,7 +1,7 @@
 import requests
 
 
-def get_stitcher_data(stitcher_url):
+def get_stitcher_data(stitcher_url, upload_dir_name=None):
     api_list_url = stitcher_url + 'list-upload-files/'
     all_data = []
     offset = 0
@@ -13,6 +13,10 @@ def get_stitcher_data(stitcher_url):
             'offset': offset,
             'limit': limit,
             'approved': True}
+        if upload_dir_name:
+            params.update({
+                'upload_dir_name': upload_dir_name
+            })
 
         try:
             response = requests.get(api_list_url, params=params)
