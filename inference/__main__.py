@@ -4,6 +4,7 @@ import torch
 from pathlib import Path
 
 from .dataset import get_stitcher_data
+from ..dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import predict
 from .utils import put_predictions, save_labeling_img
 
@@ -14,19 +15,25 @@ STITCHER_URL = 'http://ecdysis01.local:8090/'
 def main():
     """
     SAHI inference
+    Configurable for multiple use cases.
+    Currently we create pre_annotations for CVAT.AI with these hardcoded settigs.
     """
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
 
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
-    label_img_dir = '/pool1/srv/label-studio/mydata/labeling_files'
+    label_studio_img_dir = '/pool1/srv/label-studio/mydata/labeling_files'
+    yolo_format_file_dir = '/pool1/srv/cvat-tasks'
     api_post_url = STITCHER_URL + 'update-predictions-coco/'
     anno_size_gte = 50  # limits minimum annotation bbox size
     save_predictions_to_db = True
     skip_if_annotations = True
-    save_labeling_files = True
+    save_label_studio_files = False
+    save_yolo_format_files = True
 
     dont_overwrite = False
+
+    cvat_task_name = 'mytask'
     send_these_sites = []  # send based on sitecode example [str(i) for i in range(4111, 4131)]
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
@@ -63,17 +70,31 @@ def main():
                             'original_width': original_width,
                             'original_height': original_height
                         }])
-                        if coco_result:
-                            put_predictions(
-                                api_post_url,
-                                d['guid'],
-                                prediction_result)
-                    if save_labeling_files:
+                        put_predictions(
+                            api_post_url,
+                            d['guid'],
+                            prediction_result)
+
+                    # usually only doing one or the other save_label_studio_files or save_yolo_format_files
+                    if save_label_studio_files:
                         img_filename = str(Path(p).name)
                         new_filename_path = Path(f"{d['guid']}__{img_filename}")
-                        full_img_save_path = str(Path(label_img_dir) / new_filename_path)
+                        full_img_save_path = str(Path(label_studio_img_dir) / new_filename_path)
                         save_labeling_img(p, full_img_save_path)
-                        # add function to convert predictions to files.json here to add them as object store
+
+                    if save_yolo_format_files:
+                        img_filename = str(Path(p).name)
+                        new_filename_path = Path(f"{d['guid']}__{img_filename}")
+                        full_img_save_path = str(Path(yolo_format_file_dir) / cvat_task_name / 'images' / 'train' / new_filename_path)
+                        full_label_save_path = str(Path(yolo_format_file_dir) / cvat_task_name / 'labels' / 'train' / f'{new_filename_path}.txt')
+                        save_labeling_img(p, full_img_save_path)
+                        yolo_annotations = convert_coco_to_yolo(coco_result, original_width, original_height)
+                        # write segmentation label file
+                        with open(full_label_save_path, encoding="utf-8" ) as file:
+                            for i, cat in enumerate(yolo_annotations['classificaions']):
+                                polygon = yolo_annotations['segments'][i]
+                                if polygon:
+                                    file.write(f'{cat} {' '.join(str(v) for v in polygon)}\n')
 
                 else:
                     print('path not found')
