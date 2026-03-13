@@ -137,23 +137,139 @@ def generate_split_class_report(splits, class_name):
     return counts_df.sort_values(by=class_name)
 
 
-def convert_coco_to_yolo(c):
-    """
-    Convert coco annotation to yolo format given
-    'x': x,
-    'y': y,
-    'width': width,
-    'height': height,
-    'image_width': image_width,
-    'image_height': image_height
-    return x_center y_center width height # as ratios
-    """
-    x_center = (c['width'] / 2 + c['x']) / c['image_width']
-    y_center = (c['height'] / 2 + c['y']) / c['image_height']
-    width = c['width'] / c['image_width']
-    height = c['height'] / c['image_height']
+def normalize_polygons_flat_np(polygons, image_width, image_height):
+    # polygons: list of flat lists, variable lengths allowed
+    w = float(image_width)
+    h = float(image_height)
+    return [
+        (np.asarray(poly, dtype=np.float32) / np.where(
+            np.arange(len(poly)) % 2 == 0,  # x indices
+            w,
+            h
+        )).tolist()
+        for poly in polygons
+    ]
 
-    return (x_center, y_center, width, height)
+
+def min_index(arr1: np.ndarray, arr2: np.ndarray):
+    """Find a pair of indexes with the shortest distance between two arrays of 2D points.
+
+    Args:
+        arr1 (np.ndarray): A NumPy array of shape (N, 2) representing N 2D points.
+        arr2 (np.ndarray): A NumPy array of shape (M, 2) representing M 2D points.
+
+    Returns:
+        (tuple[int, int]): A tuple (idx1, idx2) where idx1 is the index in arr1 and idx2 is the index in arr2 of the
+            pair with the shortest distance.
+    """
+    dis = ((arr1[:, None, :] - arr2[None, :, :]) ** 2).sum(-1)
+    return np.unravel_index(np.argmin(dis, axis=None), dis.shape)
+
+
+def merge_multi_segment(segments: list[list]):
+    """Merge multiple segments into one list by connecting the coordinates with the minimum distance between each
+    segment.
+
+    This function connects these coordinates with a thin line to merge all segments into one.
+
+    Args:
+        segments (list[list]): Original segmentations in COCO's JSON file. Each element is a list of coordinates, like
+            [segmentation1, segmentation2,...].
+
+    Returns:
+        (list[np.ndarray]): A list of connected segments represented as NumPy arrays.
+    """
+    s = []
+    segments = [np.array(i).reshape(-1, 2) for i in segments]
+    idx_list = [[] for _ in range(len(segments))]
+
+    # Record the indexes with min distance between each segment
+    for i in range(1, len(segments)):
+        idx1, idx2 = min_index(segments[i - 1], segments[i])
+        idx_list[i - 1].append(idx1)
+        idx_list[i].append(idx2)
+
+    # Use two round to connect all the segments
+    for k in range(2):
+        # Forward connection
+        if k == 0:
+            for i, idx in enumerate(idx_list):
+                # Middle segments have two indexes, reverse the index of middle segments
+                if len(idx) == 2 and idx[0] > idx[1]:
+                    idx = idx[::-1]
+                    segments[i] = segments[i][::-1, :]
+
+                segments[i] = np.roll(segments[i], -idx[0], axis=0)
+                segments[i] = np.concatenate([segments[i], segments[i][:1]])
+                # Deal with the first segment and the last one
+                if i in {0, len(idx_list) - 1}:
+                    s.append(segments[i])
+                else:
+                    idx = [0, idx[1] - idx[0]]
+                    s.append(segments[i][idx[0] : idx[1] + 1])
+
+        else:
+            for i in range(len(idx_list) - 1, -1, -1):
+                if i not in {0, len(idx_list) - 1}:
+                    idx = idx_list[i]
+                    nidx = abs(idx[1] - idx[0])
+                    s.append(segments[i][nidx:])
+    return s
+
+
+def convert_coco_to_yolo(coco_result, image_width, image_height, use_keypoints=False):
+    """
+    Modified from convert_coco at
+    https://github.com/ultralytics/ultralytics/blob/main/ultralytics/data/converter.py
+    and requirements of
+    https://docs.cvat.ai/docs/dataset_management/formats/format-yolo-ultralytics/
+    """
+    boxes = []
+    segments = []
+    keypoints = []
+    classificaions = []
+    for anno in coco_result['annotations']:
+        if anno.get("iscrowd", False):
+            continue
+        # The COCO box format is [top left x, top left y, width, height]
+        box = np.array(anno["bbox"], dtype=np.float64)
+        box[:2] += box[2:] / 2  # xy top-left corner to center
+        box[[0, 2]] /= image_width  # normalize x
+        box[[1, 3]] /= image_height  # normalize y
+        if box[2] <= 0 or box[3] <= 0:  # if w <= 0 and h <= 0
+            continue
+        boxes.append(box)
+        classificaions.append(anno['category_id'])
+
+        if not anno.get("segmentation"):
+            segments.append([])
+        elif len(anno["segmentation"]) > 1:
+            # sometimes multiple polygons are predicted for a single object
+            s = merge_multi_segment(anno["segmentation"])
+            s = (np.concatenate(s, axis=0) / np.array([image_width, image_height])).reshape(-1).tolist()
+        else:
+            s = [j for i in anno["segmentation"] for j in i]  # all segments concatenated
+            s = (np.array(s).reshape(-1, 2) / np.array([image_width, image_height])).reshape(-1).tolist()
+        segments.append(s)
+
+        if use_keypoints:
+            if anno.get("keypoints") is None:
+                keypoints.append([])
+            keypoints.append(
+                box + (np.array(anno["keypoints"]).reshape(-1, 3) / np.array([image_width, image_height, 1])).reshape(-1).tolist()
+            )
+    assert len(boxes) == len(classificaions)
+    if segments:
+        assert len(boxes) == len(classificaions) == len(segments)
+    if keypoints:
+        assert len(boxes) == len(classificaions) == len(segments) == len(keypoints)
+
+    return {
+        'boxes': boxes,
+        'classificaions': classificaions,
+        'segments': segments,
+        'keypoints': keypoints
+    }
 
 
 def get_polygon_area(x, y):
