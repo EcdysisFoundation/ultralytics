@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 
 from .dataset import get_stitcher_data
-from ..dataset_generation.utils import convert_coco_to_yolo
+from dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import predict
 from .utils import put_predictions, save_labeling_img
 
