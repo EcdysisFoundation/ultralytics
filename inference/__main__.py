@@ -15,8 +15,7 @@ STITCHER_URL = 'http://ecdysis01.local:8090/'
 def main():
     """
     SAHI inference
-    Configurable for multiple use cases.
-    Currently we create pre_annotations for CVAT.AI with these hardcoded settigs.
+    Configurable for multiple use cases by hardcoded settings.
     """
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
