@@ -37,6 +37,9 @@ def main():
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
     all_filters = send_these_sites + send_these_panos
+    if len(all_filters) == 0:
+        print('WARNING: no filter for sites or panos is not allowed, exiting')
+        return
     for site_or_dir in all_filters:
         filtered_data = get_stitcher_data(STITCHER_URL, site_or_dir)
 
@@ -46,7 +49,7 @@ def main():
                     and d['upload_dir_name'] not in send_these_panos:
                 continue
             if d['label_studio_project'] and skip_if_in_label_studio_project:
-                print(f'skip_if_in_label_studio_project enabled, skipping {d['upload_dir_name']}')
+                print(f"skip_if_in_label_studio_project enabled, skipping {d['upload_dir_name']}")
                 continue
             if d['panorama_path']:
                 if dont_overwrite and d['predictions_coco']:
@@ -96,7 +99,7 @@ def main():
                             for i, cat in enumerate(yolo_annotations['classificaions']):
                                 polygon = yolo_annotations['segments'][i]
                                 if polygon:
-                                    file.write(f'{cat} {' '.join(str(v) for v in polygon)}\n')
+                                    file.write(f"{cat} {' '.join(str(v) for v in polygon)}\n")
 
                 else:
                     print('path not found')
