@@ -20,7 +20,6 @@ def main():
     """
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
-
     file_mount = '/pool1/srv/label-studio/mydata/stitchermedia'
     label_studio_img_dir = '/pool1/srv/label-studio/mydata/labeling_files'
     yolo_format_file_dir = '/pool1/srv/cvat-tasks'
@@ -28,13 +27,14 @@ def main():
     anno_size_gte = 50  # limits minimum annotation bbox size
     save_predictions_to_db = True
     skip_if_annotations = True
-    save_label_studio_files = False
-    save_yolo_format_files = True
+    skip_if_in_label_studio_project = True
+    save_label_studio_files = True
+    save_yolo_format_files = False
 
     dont_overwrite = False
 
     cvat_task_name = 'mytask'
-    send_these_sites = []  # send based on sitecode example [str(i) for i in range(4111, 4131)]
+    send_these_sites = []  # send based on sitecode example [str(i) for i in range(4141, 4161)]
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
     all_filters = send_these_sites + send_these_panos
@@ -45,6 +45,9 @@ def main():
             # we use a name convention in first for characters, filter those
             if d['upload_dir_name'][:4] not in send_these_sites \
                     and d['upload_dir_name'] not in send_these_panos:
+                continue
+            if d['label_studio_project'] and skip_if_in_label_studio_project:
+                print(f'skip_if_in_label_studio_project enabled, skipping {d['upload_dir_name']}')
                 continue
             if d['panorama_path']:
                 if dont_overwrite and d['predictions_coco']:
