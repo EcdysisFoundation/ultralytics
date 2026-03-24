@@ -24,14 +24,9 @@ Ultralytics uses a very large collection of libraries, including many common lib
 
 ### Symlink image files
 
-We use symlinks to access images over a local private netwrok. For new mounts, first make a directory locally where the external mount will exist (second argument).
-
-localserver sshfs
-
-`sudo sshfs user@localserver:/path_to/media/ /path_to/media/ -o allow_other`
+We use symlinks to access images over a local private network using NFS.
 
 Can check if the entry still exists by viewing filesystem usage with `df -H`
-
 
 ### Dataset Generation
 
