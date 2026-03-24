@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 
 from .dataset import get_stitcher_data
-from ..dataset_generation.utils import convert_coco_to_yolo
+from dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import predict
 from .utils import put_predictions, save_labeling_img
 
@@ -62,6 +62,7 @@ def main():
                 p = p.replace('/media', '')
                 if os.path.exists(p):
                     print(f'performing inference on {p}')
+                    print(f"upload_dir_name is {d['upload_dir_name']}")
                     coco_result, original_width, original_height = predict(p)
                     # filter missing bbox
                     coco_result = [v for v in coco_result if v['bbox']]
@@ -90,12 +91,14 @@ def main():
                     if save_yolo_format_files:
                         img_filename = str(Path(p).name)
                         new_filename_path = Path(f"{d['guid']}__{img_filename}")
-                        full_img_save_path = str(Path(yolo_format_file_dir) / cvat_task_name / 'images' / 'train' / new_filename_path)
-                        full_label_save_path = str(Path(yolo_format_file_dir) / cvat_task_name / 'labels' / 'train' / f'{new_filename_path}.txt')
+                        task_name_path = Path(yolo_format_file_dir) / cvat_task_name
+                        task_name_path.mkdir(parents=True, exist_ok=True)
+                        full_img_save_path = str(task_name_path / new_filename_path)
+                        full_label_save_path = str(task_name_path / f'{new_filename_path.stem}.txt')
                         save_labeling_img(p, full_img_save_path)
                         yolo_annotations = convert_coco_to_yolo(coco_result, original_width, original_height)
                         # write segmentation label file
-                        with open(full_label_save_path, encoding="utf-8" ) as file:
+                        with open(full_label_save_path, mode="w", encoding="utf-8") as file:
                             for i, cat in enumerate(yolo_annotations['classificaions']):
                                 polygon = yolo_annotations['segments'][i]
                                 if polygon:

@@ -49,7 +49,7 @@ def save_labeling_img(path, full_img_save_path):
     pixels = w * h
     print(f'img pixels are {pixels}')
     if pixels > target_pixels:
-        print(f'resizing {path}')
+        print(f'> target of {target_pixels} resizing {path}')
         scale = sqrt(target_pixels / pixels)
         new_width = max(1, int(w * scale))
         new_height = max(1, int(h * scale))

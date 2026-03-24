@@ -228,7 +228,7 @@ def convert_coco_to_yolo(coco_result, image_width, image_height, use_keypoints=F
     segments = []
     keypoints = []
     classificaions = []
-    for anno in coco_result['annotations']:
+    for anno in coco_result:
         if anno.get("iscrowd", False):
             continue
         # The COCO box format is [top left x, top left y, width, height]
