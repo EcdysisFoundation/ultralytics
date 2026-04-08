@@ -90,7 +90,7 @@ def main():
 
                     if save_yolo_format_files:
                         img_filename = str(Path(p).name)
-                        new_filename_path = Path(f"{d['guid']}__{img_filename}")
+                        new_filename_path = Path(f"{d['upload_dir_name']}__{d['guid']}__{img_filename}")
                         task_name_path = Path(yolo_format_file_dir) / cvat_task_name
                         task_name_path.mkdir(parents=True, exist_ok=True)
                         full_img_save_path = str(task_name_path / new_filename_path)
