@@ -24,15 +24,15 @@ def main():
     yolo_format_file_dir = '/pool1/srv/cvat-tasks'
     api_post_url = STITCHER_URL + 'update-predictions-coco/'
     anno_size_gte = 50  # limits minimum annotation bbox size
-    save_predictions_to_db = True
+    save_predictions_to_db = False
     skip_if_annotations = True
     skip_if_in_label_studio_project = True
-    save_label_studio_files = True
-    save_yolo_format_files = False
+    save_label_studio_files = False
+    save_yolo_format_files = True
 
-    dont_overwrite = False
+    dont_overwrite = False  # Dont overwrite predictions
 
-    cvat_task_name = 'mytask'
+    cvat_task_name = 'mytask'  # Used for save_yolo_format_files folder name
     send_these_sites = []  # send based on sitecode example [str(i) for i in range(4141, 4161)]
     send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
 
@@ -90,7 +90,7 @@ def main():
 
                     if save_yolo_format_files:
                         img_filename = str(Path(p).name)
-                        new_filename_path = Path(f"{d['guid']}__{img_filename}")
+                        new_filename_path = Path(f"{d['upload_dir_name']}__{d['guid']}__{img_filename}")
                         task_name_path = Path(yolo_format_file_dir) / cvat_task_name
                         task_name_path.mkdir(parents=True, exist_ok=True)
                         full_img_save_path = str(task_name_path / new_filename_path)
