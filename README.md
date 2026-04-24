@@ -14,11 +14,11 @@ Activate environment
 
 Install for Cuda, prioritize source as pytorch, nvidia, conda-forge
 
-`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=11.8 ultralytics scikit-learn sahi scikit-image`
+`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=11.8 ultralytics scikit-learn sahi scikit-image pycocotools`
 
 Install for local dev, without Nvidia GPUs
 
-`conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn sahi scikit-image`
+`conda install -c pytorch -c conda-forge pytorch torchvision ultralytics sckit-learn sahi scikit-image pycocotools`
 
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. To avoid problems with Ultralytics, try to only try to use the libraries it includes and those included above.
 

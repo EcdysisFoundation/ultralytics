@@ -6,6 +6,13 @@ from sahi.predict import get_sliced_prediction
 from .sahi_segmentation import DETECTION_MODEL
 
 def run_evaluation_inference(dataset_json, images_root, eval_output):
+    """
+    Intended as input for..
+    sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/local_files/evaluation_dataset_1/dataset_test.json \
+                   --result_json_path /home/ecdysis/ultralytics/local_files/evaluation_dataset_1/evaluation_result.json \
+                   --type segm \
+                   --classwise
+    """
     # Load the ground truth to get the correct Image IDs
     with open(dataset_json, 'r') as f:
         gt_data = json.load(f)
@@ -28,8 +35,6 @@ def run_evaluation_inference(dataset_json, images_root, eval_output):
             overlap_height_ratio=0.2,
             overlap_width_ratio=0.2,
             perform_standard_pred=False,
-            verbose=0,
-            batch_size=16  # <--- CRITICAL for GPU speed
         )
 
         # Convert to COCO format using the INTEGER ID from the GT
