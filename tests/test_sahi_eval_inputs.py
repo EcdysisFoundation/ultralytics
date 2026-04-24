@@ -1,5 +1,5 @@
 import json
-                                                                                                                temptest.py
+
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
