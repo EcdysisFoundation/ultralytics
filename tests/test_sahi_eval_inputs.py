@@ -1,4 +1,7 @@
 import json
+                                                                                                                temptest.py
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
 
 DATASET_DIR = '/home/ecdysis/ultralytics/local_files/evaluation_dataset_1/'
 DATASET_JSON = f'{DATASET_DIR}dataset_test.json'
@@ -69,8 +72,8 @@ def check_ground_truth():
             print(f"GT Segmentation Nesting: {type(ann['segmentation'][0])}")
 
 
-def check_dataset_test():
-    print('---------- CHECK_DATASET_TEST -----------')
+def check_boundaries():
+    print('---------- CHECK_BOUNDARIES -----------')
     gt_path = DATASET_JSON
     pred_path = EVAL_OUTPUT
 
@@ -103,8 +106,26 @@ def check_dataset_test():
         print(f"Image 0 dimensions in GT: {img_dims.get(0)}")
 
 
+def manual_load_test():
+    gt_path = DATASET_JSON
+    res_path = EVAL_OUTPUT
+
+    try:
+        coco_gt = COCO(gt_path)
+        coco_dt = coco_gt.loadRes(res_path) # This is where it usually fails
+
+        coco_eval = COCOeval(coco_gt, coco_dt, 'bbox')
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+        coco_eval.summarize()
+    except Exception as e:
+        print(f"\nCRITICAL ERROR: {e}")
+
+
 if __name__ == "__main__":
     are_ids_matching()
     inspect_prediction()
     check_ground_truth()
-    check_dataset_test()
+    check_boundaries()
+    # if above checks out
+    manual_load_test()
