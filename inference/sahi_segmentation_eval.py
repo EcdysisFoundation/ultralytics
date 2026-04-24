@@ -1,0 +1,52 @@
+import json
+import os
+
+from sahi.predict import get_sliced_prediction
+
+from .sahi_segmentation import DETECTION_MODEL
+
+def run_evaluation_inference(dataset_json, images_root, eval_output):
+    # Load the ground truth to get the correct Image IDs
+    with open(dataset_json, 'r') as f:
+        gt_data = json.load(f)
+
+    all_coco_predictions = []
+
+    # Loop through images defined in the Ground Truth
+    for img_entry in gt_data['images']:
+        image_id = img_entry['id']
+        file_name = img_entry['file_name']
+        img_path = os.path.join(images_root, file_name)
+
+        # Run Sliced Prediction
+        # batch_size=16 tells the GPU to process 16 slices at once
+        result = get_sliced_prediction(
+            img_path,
+            DETECTION_MODEL,
+            slice_height=2000,
+            slice_width=2000,
+            overlap_height_ratio=0.2,
+            overlap_width_ratio=0.2,
+            perform_standard_pred=False,
+            verbose=0,
+            batch_size=16  # <--- CRITICAL for GPU speed
+        )
+
+        # Convert to COCO format using the INTEGER ID from the GT
+        coco_predictions = result.to_coco_predictions(image_id=image_id)
+        all_coco_predictions.extend(coco_predictions)
+
+    # 4. Save the final result.json
+    with open(eval_output, 'w') as f:
+        json.dump(all_coco_predictions, f)
+
+    print(f"Evaluation results saved to {eval_output}")
+
+
+if __name__ == "__main__":
+    # insert paths, put result with dataset_json instead of somewhere else.
+    dataset_dir = '/home/ecdysis/ultralytics/local_files/evaluation_dataset_1/'
+    dataset_json = f'{dataset_dir}dataset_test.json'
+    images_root = f'{dataset_dir}images/test'
+    eval_output = f'{dataset_dir}evaluation_result.json'
+    run_evaluation_inference(dataset_json, images_root, eval_output)
