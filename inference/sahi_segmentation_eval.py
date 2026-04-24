@@ -42,7 +42,15 @@ def run_evaluation_inference(dataset_json, images_root, eval_output):
         coco_predictions = result.to_coco_predictions(image_id=image_id)
         all_coco_predictions.extend(coco_predictions)
 
-    # 4. Save the final result.json
+    # 4. data cleaning, mods
+    #    Shift indexes by one because coco evaluation will ignore zero index.
+    #    dataset_json should have already been shifted
+    for pred in all_coco_predictions:
+        pred['category_id'] = int(pred['category_id']) + 1
+    # remove predictions with no bounding box
+    all_coco_predictions = [v for v in all_coco_predictions if v['bbox']]
+
+    # 5. Save the final result.json
     with open(eval_output, 'w') as f:
         json.dump(all_coco_predictions, f)
 
