@@ -6,7 +6,7 @@ EVAL_OUTPUT = f'{DATASET_DIR}evaluation_result.json'
 
 
 def are_ids_matching():
-
+    print('----- ARE_IDS_MATCHING -------')
     # Paths to your files
     gt_path = DATASET_JSON
     pred_path = EVAL_OUTPUT
@@ -36,7 +36,7 @@ def are_ids_matching():
 
 
 def inspect_prediction():
-
+    print('----------- INSPECT_PREDICTION ------------')
     pred_path = EVAL_OUTPUT
 
     with open(pred_path, 'r') as f:
@@ -56,6 +56,7 @@ def inspect_prediction():
 
 
 def check_ground_truth():
+    print('-------- CHECK_GROUND_TRUTH ----------')
     with open(DATASET_JSON, 'r') as f:
         gt = json.load(f)
 
@@ -69,7 +70,7 @@ def check_ground_truth():
 
 
 def check_dataset_test():
-
+    print('---------- CHECK_DATASET_TEST -----------')
     gt_path = DATASET_JSON
     pred_path = EVAL_OUTPUT
 
@@ -82,22 +83,28 @@ def check_dataset_test():
     img_dims = {img['id']: (img['width'], img['height']) for img in gt['images']}
 
     out_of_bounds_count = 0
+    empty_bbox_count = 0
     for p in preds:
         img_id = p['image_id']
         if img_id in img_dims:
-            w_limit, h_limit = img_dims[img_id]
-            x, y, w, h = p['bbox']
+            if p['bbox']:
+                w_limit, h_limit = img_dims[img_id]
+                x, y, w, h = p['bbox']
 
-            if (x + w > w_limit) or (y + h > h_limit) or (x < 0) or (y < 0):
-                out_of_bounds_count += 1
+                if (x + w > w_limit) or (y + h > h_limit) or (x < 0) or (y < 0):
+                    out_of_bounds_count += 1
+            else:
+                empty_bbox_count += 1
 
     print(f"Total Predictions: {len(preds)}")
     print(f"Out of Bounds Predictions: {out_of_bounds_count}")
+    print(f"Empty bbox predictions: {empty_bbox_count}")
     if len(gt['images']) > 0:
         print(f"Image 0 dimensions in GT: {img_dims.get(0)}")
 
 
 if __name__ == "__main__":
+    are_ids_matching()
     inspect_prediction()
     check_ground_truth()
     check_dataset_test()

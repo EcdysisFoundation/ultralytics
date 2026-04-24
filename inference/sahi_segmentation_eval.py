@@ -5,6 +5,7 @@ from sahi.predict import get_sliced_prediction
 
 from .sahi_segmentation import DETECTION_MODEL
 
+
 def run_evaluation_inference(dataset_json, images_root, eval_output):
     """
     Intended as input for..
