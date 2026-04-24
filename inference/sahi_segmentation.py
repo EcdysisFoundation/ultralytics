@@ -10,7 +10,7 @@ from sahi import AutoDetectionModel
 MODEL_PATH = 'runs/segment/train2/weights/best.pt'
 
 
-detection_model = AutoDetectionModel.from_pretrained(
+DETECTION_MODEL = AutoDetectionModel.from_pretrained(
     model_type='ultralytics',
     model_path=MODEL_PATH,
     confidence_threshold=0.3,
@@ -19,10 +19,10 @@ detection_model = AutoDetectionModel.from_pretrained(
 
 
 def predict(img_path, save_img_file=False):
-    print(f'running prediction on device {detection_model.device}')
+    print(f'running prediction on device {DETECTION_MODEL.device}')
     result = get_sliced_prediction(
         img_path,
-        detection_model,
+        DETECTION_MODEL,
         slice_height=2000,
         slice_width=2000,
         overlap_height_ratio=0.2,
