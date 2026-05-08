@@ -14,7 +14,8 @@ Activate environment
 
 Install for Cuda, prioritize source as pytorch, nvidia, conda-forge
 
-`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=11.8 ultralytics scikit-learn sahi scikit-image pycocotools`
+`conda install -c pytorch -c nvidia -c conda-forge pytorch torchvision pytorch-cuda=12.4 ultralytics scikit-learn sahi scikit-image pycocotools`
+
 
 Install for local dev, without Nvidia GPUs
 
