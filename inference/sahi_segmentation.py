@@ -25,8 +25,10 @@ def predict(img_path, save_img_file=False):
         DETECTION_MODEL,
         slice_height=2000,
         slice_width=2000,
-        overlap_height_ratio=0.2,
-        overlap_width_ratio=0.2,
+        overlap_height_ratio=0.4,
+        overlap_width_ratio=0.4,
+        postprocess_match_threshold=0.3,
+        perform_standard_pred=True
     )
     original_width = result.image_width
     original_height = result.image_height
@@ -37,7 +39,7 @@ def predict(img_path, save_img_file=False):
         combined_path_filename = img_path.replace('/panorama', '_panorama')
         filename = os.path.splitext(os.path.basename(combined_path_filename))[0]
         result.export_visuals(
-            export_dir="local_files/output/",
+            export_dir="local_files/output/inference",
             file_name=filename,
             hide_labels=True,
             hide_conf=True)
