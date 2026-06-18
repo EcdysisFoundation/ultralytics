@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import yaml
+from PIL import Image
 
 from pathlib import Path
 from uuid import uuid4
@@ -412,3 +413,69 @@ def filter_transform_segmentation_record(row, image_id, width, height, anno_size
         'coco_annotations': coco_annotations,
     })
     return row
+
+
+def get_image_info(image_path, image_id):
+    # PIL.Image.open is "lazy" - it reads metadata without loading all pixels
+    with Image.open(image_path) as img:
+        width, height = img.size
+    return {
+        "id": image_id,
+        "file_name": os.path.basename(image_path),
+        "width": width,
+        "height": height
+    }
+
+
+def convert_yolo_to_coco(yolo_file, image_width, image_height, anno_size_gte=None):
+    """
+    Reads a YOLO segmentation .txt file
+    and converts it to COCO format.
+    """
+    coco_results = []
+
+    with open(yolo_file, 'rt') as f:
+        for line in f:
+            parts = line.strip().split()
+            if not parts:
+                continue
+
+            class_id = int(parts[0])
+            # Remaining parts are x, y, x, y...
+            coords = list(map(float, parts[1:]))
+
+            # Denormalize coordinates to absolute pixels
+            abs_coords = []
+            x_points = []
+            y_points = []
+
+            for i in range(0, len(coords), 2):
+                x_abs = int(coords[i] * image_width)
+                y_abs = int(coords[i+1] * image_height)
+
+                abs_coords.append(x_abs)
+                abs_coords.append(y_abs)
+                x_points.append(x_abs)
+                y_points.append(y_abs)
+
+            # Calculate Bounding Box [x_min, y_min, width, height]
+            x_min = min(x_points)
+            y_min = min(y_points)
+            bbox_width = max(x_points) - x_min
+            bbox_height = max(y_points) - y_min
+
+            # Format for COCO
+            coco_results.append({
+                "category_id": class_id,
+                "segmentation": [abs_coords],  # COCO expects a list of polygons
+                "bbox": [int(x_min), int(y_min), int(bbox_width), int(bbox_height)],
+                "area": int(bbox_width * bbox_height),  # Simplified area
+                "iscrowd": 0
+            })
+            if anno_size_gte:
+                # filter out small annotations
+                coco_results = [
+                    v for v in coco_results if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
+                ]
+
+    return coco_results
