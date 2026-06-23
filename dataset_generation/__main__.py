@@ -26,7 +26,6 @@ DATASET_JSON = 'dataset.json'
 COCO_JSON_SOURCE = {
         "images": [],
         "categories": [{
-            "supercategory": "Arthropod",
             "id": 0,
             "name": "arthropod"}],
         "annotations": [],

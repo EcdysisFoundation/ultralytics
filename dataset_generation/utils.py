@@ -448,7 +448,7 @@ def convert_yolo_to_coco(
     with open(yolo_file, 'r') as f:
         for line in f:
             parts = list(map(float, line.strip().split()))
-            class_id = int(parts[0]) + 1
+            class_id = int(parts[0])
             poly_normalized = parts[1:]
 
             # Convert to pixel coordinates
