@@ -296,6 +296,9 @@ def pano_segmentation_training_set_fromyolo(
     }
 
     while True:
+        # stop early for temp testing
+        if img_index > 10:
+            break
         params = {
             'offset': offset,
             'limit': limit,
@@ -323,7 +326,7 @@ def pano_segmentation_training_set_fromyolo(
                     continue
                 if not row['label_file'] or not row['label_project_dir']:
                     continue
-                print(f"{row['upload_dir_name']} passed filtering, including in dataset")
+                print(f"{row['upload_dir_name']} passed filtering, checking additional criteria")
 
                 # prepare the image
                 file_name = row['panorama_path'].replace('/media/', '')
@@ -345,10 +348,15 @@ def pano_segmentation_training_set_fromyolo(
                         img_index,
                         starting_anno_id,
                         anno_size_gte)
-                    coco_json_source["images"].append(img_info)
-                    coco_json_source['annotations'] += coco_anno
-                    img_index += 1
-                    starting_anno_id += max([v['id'] for v in coco_anno])
+                    # only include images with at least one annotation
+                    if coco_anno:
+                        print(f"{row['upload_dir_name']} has annotations, including in dataset")
+                        coco_json_source["images"].append(img_info)
+                        coco_json_source['annotations'] += coco_anno
+                        img_index += 1
+                        starting_anno_id += max([v['id'] for v in coco_anno])
+                    else:
+                        print(f"{row['upload_dir_name']} has no annotations, skipping")
                 else:
                     print(f'WARNING: skipping missing img at {src}')
                     continue
