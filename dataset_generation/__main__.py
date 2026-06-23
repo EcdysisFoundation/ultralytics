@@ -110,7 +110,7 @@ if __name__ == '__main__':
     dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco_json_coco'
 
-    base_dirs = create_clear_dirs(dataset_pano=True)
+    base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
     pano_segmentation_training_set_fromyolo(dataset_dir, DATASET_JSON)
     slice_pano_training_set(
         dataset_dir,

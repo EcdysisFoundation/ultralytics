@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def create_clear_dirs(dataset_pano=False):
+def create_clear_dirs(dataset_pano=None):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
@@ -28,7 +28,7 @@ def create_clear_dirs(dataset_pano=False):
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
     if dataset_pano:
-        dp_path = Path('dataset_pano')
+        dp_path = Path(dataset_pano)
         if os.path.exists(dp_path):
             shutil.rmtree(dp_path)
         dp_path.mkdir()
