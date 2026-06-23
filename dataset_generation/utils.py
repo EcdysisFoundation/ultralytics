@@ -471,7 +471,8 @@ def convert_yolo_to_coco(
                 "segmentation": [poly_pixels],
                 "area": int(width * height),  # Simplified area
                 "bbox": [int(v) for v in [x_min, y_min, width, height]],
-                "iscrowd": 0
+                "iscrowd": 0,
+                "ignore": 0
             })
             anno_id += 1
 
