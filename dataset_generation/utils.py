@@ -427,6 +427,11 @@ def get_image_info(image_path, image_id):
     }
 
 
+def yolo_to_coco_poly(yolo_poly, w, h):
+    """Converts normalized YOLO [x, y, x, y...] to pixel-space [x, y, x, y...]"""
+    return [coord * w if i % 2 == 0 else coord * h for i, coord in enumerate(yolo_poly)]
+
+
 def convert_yolo_to_coco(
         yolo_file,
         image_width,
@@ -440,46 +445,32 @@ def convert_yolo_to_coco(
     """
     coco_results = []
     anno_id = starting_anno_id + 1
-    with open(yolo_file, 'rt') as f:
+    with open(yolo_file, 'r') as f:
         for line in f:
-            parts = line.strip().split()
-            if not parts:
+            parts = list(map(float, line.strip().split()))
+            class_id = int(parts[0]) + 1
+            poly_normalized = parts[1:]
+
+            # Convert to pixel coordinates
+            poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
+
+            # Calculate simple Bbox from polygon (min/max x, min/max y)
+            xs = poly_pixels[0::2]
+            ys = poly_pixels[1::2]
+            x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
+            width, height = x_max - x_min, y_max - y_min
+
+            # require annotation size greater than or equal to anno_size_gte
+            if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
                 continue
 
-            class_id = int(parts[0])
-            # Remaining parts are x, y, x, y...
-            coords = list(map(float, parts[1:]))
-
-            # Denormalize coordinates to absolute pixels
-            abs_coords = []
-            x_points = []
-            y_points = []
-
-            for i in range(0, len(coords), 2):
-                x_abs = int(coords[i] * image_width)
-                y_abs = int(coords[i+1] * image_height)
-
-                abs_coords.append(x_abs)
-                abs_coords.append(y_abs)
-                x_points.append(x_abs)
-                y_points.append(y_abs)
-
-            # Calculate Bounding Box [x_min, y_min, width, height]
-            x_min = min(x_points)
-            y_min = min(y_points)
-            bbox_width = max(x_points) - x_min
-            bbox_height = max(y_points) - y_min
-            bbox = [int(x_min), int(y_min), int(bbox_width), int(bbox_height)]
-            if anno_size_gte and (bbox[2] < anno_size_gte or bbox[3] < anno_size_gte):
-                continue
-            # Format for COCO
             coco_results.append({
                 "id": anno_id,
                 "image_id": image_id,
                 "category_id": class_id,
-                "segmentation": [abs_coords],  # COCO expects a list of polygons
-                "bbox": bbox,
-                "area": int(bbox_width * bbox_height),  # Simplified area
+                "segmentation": [poly_pixels],
+                "area": width * height, # Simplified area
+                "bbox": [x_min, y_min, width, height],
                 "iscrowd": 0
             })
             anno_id += 1

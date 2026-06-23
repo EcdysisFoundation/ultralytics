@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import argparse
@@ -122,7 +123,7 @@ if __name__ == '__main__':
     pano_segmentation_training_set_fromyolo(
         dataset_dir,
         DATASET_JSON,
-        COCO_JSON_SOURCE)
+        copy.deepcopy(COCO_JSON_SOURCE))
     slice_pano_training_set(
         dataset_dir,
         dataset_json_dir,
