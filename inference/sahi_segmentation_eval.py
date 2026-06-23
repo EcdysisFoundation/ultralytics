@@ -48,10 +48,10 @@ def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_fi
         if save_img_file:
             filename = Path(file_name).stem
             result.export_visuals(
-            export_dir="local_files/output/",
-            file_name=filename,
-            hide_labels=True,
-            hide_conf=True)
+                export_dir="local_files/output/",
+                file_name=filename,
+                hide_labels=True,
+                hide_conf=True)
 
     #  data cleaning, mods
     #    Shift indexes by one because coco evaluation will ignore zero index.

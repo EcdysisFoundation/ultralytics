@@ -65,24 +65,17 @@ def single_specimen_trainingset(check_missing=True):
 
 def slice_pano_training_set(
         dataset_dir,
-        dataset_json_path,
+        dataset_json_dir,
         dataset_sliced_dir):
 
-    print(f'dataset_file_path: {dataset_json_path}')
+    print(f'dataset_file_path: {dataset_json_dir}')
 
-    coco_dict = load_json(dataset_json_path)
+    coco_dict = load_json(dataset_json_dir)
     print('coco_dict read, first image is')
     print(coco_dict["images"][0]["file_name"])
 
-    # avoid DecompressionBombError
-    max_image_pixels = Image.MAX_IMAGE_PIXELS
-    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
-    if max_image_pixels < 180000000:
-        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
-        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
-
     slice_coco(
-        coco_annotation_file_path=dataset_json_path,
+        coco_annotation_file_path=dataset_json_dir,
         image_dir=dataset_dir,
         output_coco_annotation_file_name="sliced_coco.json",
         ignore_negative_samples=False,
@@ -104,17 +97,24 @@ if __name__ == '__main__':
     """
     curr_dir = os.getcwd()
     coco_conv_dir = '{DATASET_PANO}/coco_converted'
-    dataset_json_path = f'/{DATASET_PANO}/{DATASET_JSON}'
+    dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
     dataset_dir = f'{curr_dir}/{DATASET_PANO}'
     slice_dir = f'{DATASET_PANO}/sliced'
     dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco_json_coco'
 
+    # avoid DecompressionBombError
+    max_image_pixels = Image.MAX_IMAGE_PIXELS
+    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
+    if max_image_pixels < 180000000:
+        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
+        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
+
     base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
     pano_segmentation_training_set_fromyolo(dataset_dir, DATASET_JSON)
     slice_pano_training_set(
         dataset_dir,
-        dataset_json_path,
+        dataset_json_dir,
         dataset_sliced_dir)
     convert_coco(
         slice_dir,

@@ -427,13 +427,19 @@ def get_image_info(image_path, image_id):
     }
 
 
-def convert_yolo_to_coco(yolo_file, image_width, image_height, anno_size_gte=None):
+def convert_yolo_to_coco(
+        yolo_file,
+        image_width,
+        image_height,
+        image_id,
+        starting_anno_id=0,
+        anno_size_gte=0,):
     """
     Reads a YOLO segmentation .txt file
     and converts it to COCO format.
     """
     coco_results = []
-
+    anno_id = starting_anno_id + 1
     with open(yolo_file, 'rt') as f:
         for line in f:
             parts = line.strip().split()
@@ -463,19 +469,19 @@ def convert_yolo_to_coco(yolo_file, image_width, image_height, anno_size_gte=Non
             y_min = min(y_points)
             bbox_width = max(x_points) - x_min
             bbox_height = max(y_points) - y_min
-
+            bbox = [int(x_min), int(y_min), int(bbox_width), int(bbox_height)]
+            if anno_size_gte and bbox[2] >= anno_size_gte or bbox[3] >= anno_size_gte:
+                continue
             # Format for COCO
             coco_results.append({
+                "id": anno_id,
+                "image_id": image_id,
                 "category_id": class_id,
                 "segmentation": [abs_coords],  # COCO expects a list of polygons
-                "bbox": [int(x_min), int(y_min), int(bbox_width), int(bbox_height)],
+                "bbox": bbox,
                 "area": int(bbox_width * bbox_height),  # Simplified area
                 "iscrowd": 0
             })
-            if anno_size_gte:
-                # filter out small annotations
-                coco_results = [
-                    v for v in coco_results if v['bbox'][2] >= anno_size_gte or v['bbox'][3] >= anno_size_gte
-                ]
+            anno_id += 1
 
     return coco_results
