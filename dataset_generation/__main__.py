@@ -12,14 +12,16 @@ from ultralytics.data.converter import convert_coco
 from PIL import Image
 
 from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
-from .stitcher_api import (
-    pano_segmentation_training_set)
+from .stitcher_api import pano_segmentation_training_set_fromyolo
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
 logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(logging.INFO)
+
+DATASET_PANO = 'dataset_pano'
+DATASET_JSON = 'dataset.json'
 
 
 def get_args() -> argparse.Namespace:
@@ -61,11 +63,11 @@ def single_specimen_trainingset(check_missing=True):
     print('end of main')
 
 
-def slice_pano_training_set():
-    curr_dir = os.getcwd()
-    dataset_dir = curr_dir + '/dataset_pano'
-    dataset_json_path = dataset_dir + '/dataset.json'
-    dataset_sliced = dataset_dir + '/sliced/'
+def slice_pano_training_set(
+        dataset_dir,
+        dataset_json_path,
+        dataset_sliced_dir):
+
     print(f'dataset_file_path: {dataset_json_path}')
 
     coco_dict = load_json(dataset_json_path)
@@ -84,7 +86,7 @@ def slice_pano_training_set():
         image_dir=dataset_dir,
         output_coco_annotation_file_name="sliced_coco.json",
         ignore_negative_samples=False,
-        output_dir=dataset_sliced,
+        output_dir=dataset_sliced_dir,
         slice_height=2000,
         slice_width=2000,
         overlap_height_ratio=0.2,
@@ -100,14 +102,23 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
-    coco_conv_dir = 'dataset_pano/coco_converted'
-    slice_dir = 'dataset_pano/sliced/'
-    create_clear_dirs(dataset_pano=True)
-    pano_segmentation_training_set()
-    slice_pano_training_set()
+    curr_dir = os.getcwd()
+    coco_conv_dir = '{DATASET_PANO}/coco_converted'
+    dataset_json_path = f'/{DATASET_PANO}/{DATASET_JSON}'
+    dataset_dir = f'{curr_dir}/{DATASET_PANO}'
+    slice_dir = f'{DATASET_PANO}/sliced'
+    dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
+    sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco_json_coco'
+
+    base_dirs = create_clear_dirs(dataset_pano=True)
+    pano_segmentation_training_set_fromyolo(dataset_dir, DATASET_JSON)
+    slice_pano_training_set(
+        dataset_dir,
+        dataset_json_path,
+        dataset_sliced_dir)
     convert_coco(
         slice_dir,
         cls91to80=False,
         save_dir=coco_conv_dir,
         use_segments=True)
-    split_by_labels_train_val(f'{coco_conv_dir}/labels/sliced_coco.json_coco', slice_dir)
+    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs)

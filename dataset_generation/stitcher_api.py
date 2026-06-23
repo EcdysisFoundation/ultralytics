@@ -174,7 +174,6 @@ def pano_segmentation_training_set(anno_size_gte=50):
     limit = 10
     curr_dir = os.getcwd()
     print(f'curr_dir: {curr_dir}')
-    curr_dir = os.getcwd()
     dataset_dir = curr_dir + '/dataset_pano'
     out_json = dataset_dir + '/dataset.json'
     print(f'out_json: {out_json}')
@@ -261,7 +260,10 @@ def pano_segmentation_training_set(anno_size_gte=50):
         json.dump(coco_json_source, f)
 
 
-def pano_segmentation_training_set_fromyolo(anno_size_gte=50):
+def pano_segmentation_training_set_fromyolo(
+        dataset_dir,
+        dataset_json,
+        anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
     anno_size_gte, if not None, filters annotations to have
@@ -275,11 +277,7 @@ def pano_segmentation_training_set_fromyolo(anno_size_gte=50):
     api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
     offset = 0
     limit = 10
-    curr_dir = os.getcwd()
-    print(f'curr_dir: {curr_dir}')
-    curr_dir = os.getcwd()
-    dataset_dir = curr_dir + '/dataset_pano'
-    out_json = dataset_dir + '/dataset.json'
+    out_json = f'{dataset_dir}/{dataset_json}'
     print(f'out_json: {out_json}')
     dataset_path = Path(dataset_dir)
     source_img_dir = FILE_MOUNT
