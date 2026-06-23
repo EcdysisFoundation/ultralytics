@@ -433,7 +433,7 @@ def convert_yolo_to_coco(
         image_height,
         image_id,
         starting_anno_id=0,
-        anno_size_gte=0,):
+        anno_size_gte=0):
     """
     Reads a YOLO segmentation .txt file
     and converts it to COCO format.
@@ -470,7 +470,7 @@ def convert_yolo_to_coco(
             bbox_width = max(x_points) - x_min
             bbox_height = max(y_points) - y_min
             bbox = [int(x_min), int(y_min), int(bbox_width), int(bbox_height)]
-            if anno_size_gte and bbox[2] >= anno_size_gte or bbox[3] >= anno_size_gte:
+            if anno_size_gte and (bbox[2] < anno_size_gte or bbox[3] < anno_size_gte):
                 continue
             # Format for COCO
             coco_results.append({

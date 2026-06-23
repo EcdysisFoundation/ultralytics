@@ -22,6 +22,14 @@ logger.setLevel(logging.INFO)
 
 DATASET_PANO = 'dataset_pano'
 DATASET_JSON = 'dataset.json'
+COCO_JSON_SOURCE = {
+        "images": [],
+        "categories": [{
+            "supercategory": "Arthropod",
+            "id": 0,
+            "name": "arthropod"}],
+        "annotations": [],
+    }
 
 
 def get_args() -> argparse.Namespace:
@@ -111,7 +119,10 @@ if __name__ == '__main__':
         print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
     base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
-    pano_segmentation_training_set_fromyolo(dataset_dir, DATASET_JSON)
+    pano_segmentation_training_set_fromyolo(
+        dataset_dir,
+        DATASET_JSON,
+        COCO_JSON_SOURCE)
     slice_pano_training_set(
         dataset_dir,
         dataset_json_dir,

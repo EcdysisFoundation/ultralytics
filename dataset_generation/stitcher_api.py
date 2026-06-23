@@ -263,6 +263,7 @@ def pano_segmentation_training_set(anno_size_gte=50):
 def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
+        coco_json_source,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -286,14 +287,6 @@ def pano_segmentation_training_set_fromyolo(
 
     img_index = 0
     starting_anno_id = 0
-    coco_json_source = {
-        "images": [],
-        "categories": [{
-            "supercategory": "Arthropod",
-            "id": 1,
-            "name": "arthropod"}],
-        "annotations": [],
-    }
 
     while True:
         # stop early for temp testing
