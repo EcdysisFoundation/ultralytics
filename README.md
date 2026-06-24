@@ -39,11 +39,7 @@ conda install -y -c pytorch -c nvidia -c conda-forge \
 
 `pip install click fire tqdm`
 
-7. Upgrade your OpenCV headless version to meet SAHI 0.12.1 standards
-
-`pip install "opencv-python>=4.12.0.88" --no-deps`
-
-8. Problems with 2024 MKL backend???
+7. Problems with 2024 MKL backend???
 
 `conda install -y -c conda-forge "mkl<2024.1"`
 
