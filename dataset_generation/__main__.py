@@ -112,7 +112,7 @@ if __name__ == '__main__':
     """
     args = get_args()
     curr_dir = os.getcwd()
-    coco_conv_dir = '{DATASET_PANO}/coco_converted'
+    coco_conv_dir = f'{DATASET_PANO}/coco_converted'
     dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
     dataset_dir = f'{curr_dir}/{DATASET_PANO}'
     slice_dir = f'{DATASET_PANO}/sliced'
