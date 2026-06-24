@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import argparse
@@ -12,14 +13,26 @@ from ultralytics.data.converter import convert_coco
 from PIL import Image
 
 from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
-from .stitcher_api import (
-    pano_segmentation_training_set)
+from .stitcher_api import pano_segmentation_training_set_fromyolo, pano_segmentation_training_set
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
 logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(logging.INFO)
+
+DATASET_PANO = 'dataset_pano'
+DATASET_JSON = 'dataset.json'
+COCO_JSON_SOURCE = {
+        "images": [],
+        "categories": [{
+            "id": 1,
+            "name": "arthropod"}],
+        "annotations": [],
+    }
+
+PLATFORM_CVAT = 'cvat'
+PLATFORM_LABEL_STUDIO = 'label-studio'
 
 
 def get_args() -> argparse.Namespace:
@@ -30,6 +43,10 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-cpy', '--copy-files', action='store_true')
+    parser.add_argument(
+        '--label-platform',
+        choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
+        default=PLATFORM_CVAT)
 
     return parser.parse_args()
 
@@ -61,30 +78,23 @@ def single_specimen_trainingset(check_missing=True):
     print('end of main')
 
 
-def slice_pano_training_set():
-    curr_dir = os.getcwd()
-    dataset_dir = curr_dir + '/dataset_pano'
-    dataset_json_path = dataset_dir + '/dataset.json'
-    dataset_sliced = dataset_dir + '/sliced/'
-    print(f'dataset_file_path: {dataset_json_path}')
+def slice_pano_training_set(
+        dataset_dir,
+        dataset_json_dir,
+        dataset_sliced_dir):
 
-    coco_dict = load_json(dataset_json_path)
+    print(f'dataset_file_path: {dataset_json_dir}')
+
+    coco_dict = load_json(dataset_json_dir)
     print('coco_dict read, first image is')
     print(coco_dict["images"][0]["file_name"])
 
-    # avoid DecompressionBombError
-    max_image_pixels = Image.MAX_IMAGE_PIXELS
-    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
-    if max_image_pixels < 180000000:
-        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
-        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
-
     slice_coco(
-        coco_annotation_file_path=dataset_json_path,
+        coco_annotation_file_path=dataset_json_dir,
         image_dir=dataset_dir,
         output_coco_annotation_file_name="sliced_coco.json",
         ignore_negative_samples=False,
-        output_dir=dataset_sliced,
+        output_dir=dataset_sliced_dir,
         slice_height=2000,
         slice_width=2000,
         overlap_height_ratio=0.2,
@@ -100,14 +110,45 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
-    coco_conv_dir = 'dataset_pano/coco_converted'
-    slice_dir = 'dataset_pano/sliced/'
-    create_clear_dirs(dataset_pano=True)
-    pano_segmentation_training_set()
-    slice_pano_training_set()
+    args = get_args()
+    curr_dir = os.getcwd()
+    coco_conv_dir = f'{DATASET_PANO}/coco_converted'
+    dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
+    dataset_dir = f'{curr_dir}/{DATASET_PANO}'
+    slice_dir = f'{DATASET_PANO}/sliced'
+    dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
+    sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
+
+    # avoid DecompressionBombError
+    max_image_pixels = Image.MAX_IMAGE_PIXELS
+    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
+    if max_image_pixels < 180000000:
+        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
+        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
+
+    base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+    if args.label_platform == PLATFORM_CVAT:
+        pano_segmentation_training_set_fromyolo(
+            dataset_dir,
+            DATASET_JSON,
+            copy.deepcopy(COCO_JSON_SOURCE),
+            args.test_flag)
+    elif args.label_platform == PLATFORM_LABEL_STUDIO:
+        pano_segmentation_training_set(
+            dataset_dir,
+            DATASET_JSON,
+            copy.deepcopy(COCO_JSON_SOURCE),
+            args.test_flag
+        )
+    else:
+        print(f'--label-platform {args.label_platform} not supported')
+    slice_pano_training_set(
+        dataset_dir,
+        dataset_json_dir,
+        dataset_sliced_dir)
     convert_coco(
         slice_dir,
         cls91to80=False,
         save_dir=coco_conv_dir,
         use_segments=True)
-    split_by_labels_train_val(f'{coco_conv_dir}/labels/sliced_coco.json_coco', slice_dir)
+    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs)

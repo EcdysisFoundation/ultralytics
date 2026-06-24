@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import yaml
+from PIL import Image
 
 from pathlib import Path
 from uuid import uuid4
@@ -393,15 +394,15 @@ def filter_transform_record(row):
     return row
 
 
-def filter_transform_segmentation_record(row, image_id, width, height, anno_size_gte):
+def filter_transform_segmentation_record(row, image_id, width, height, anno_size_gte, starting_anno_id):
     """
     For segmentation, make coco annotations and provide image path.
     """
     if not row['annotations_segment']:
         return
-
+    anno_id = starting_anno_id + 1
     coco_annotations = [convert_ls_polygonlabels_to_coco(
-        i, image_id,
+        anno_id + i, image_id,
         v['points'], width, height) for i, v in enumerate(row['annotations_segment'])]
     if anno_size_gte:
         # filter out small annotations
@@ -412,3 +413,84 @@ def filter_transform_segmentation_record(row, image_id, width, height, anno_size
         'coco_annotations': coco_annotations,
     })
     return row
+
+
+def get_image_info(image_path, image_id):
+    # PIL.Image.open is "lazy" - it reads metadata without loading all pixels
+    with Image.open(image_path) as img:
+        width, height = img.size
+    return {
+        "id": image_id,
+        "file_name": os.path.basename(image_path),
+        "width": width,
+        "height": height
+    }
+
+
+def yolo_to_coco_poly(yolo_poly, w, h):
+    """Converts normalized YOLO [x, y, x, y...] to pixel-space [x, y, x, y...]"""
+    return [coord * w if i % 2 == 0 else coord * h for i, coord in enumerate(yolo_poly)]
+
+
+def calculate_polygon_area(xs, ys):
+    """Calculates the area of a polygon using the Shoelace formula."""
+    n = len(xs)
+    if n < 3:
+        return 0.0
+    area = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        area += xs[i] * ys[j]
+        area -= xs[j] * ys[i]
+    return abs(area) / 2.0
+
+
+def convert_yolo_to_coco(
+        yolo_file,
+        image_width,
+        image_height,
+        image_id,
+        starting_anno_id=0,
+        anno_size_gte=0):
+    """
+    Reads a YOLO segmentation .txt file
+    and converts it to COCO format.
+    """
+    coco_results = []
+    anno_id = starting_anno_id + 1
+    with open(yolo_file, 'r') as f:
+        for line in f:
+            parts = line.strip().split()
+            if not parts or len(parts) < 7:  # A valid polygon needs at least 3 points (1 class + 6 coords)
+                continue
+            class_id = int(parts[0]) + 1
+            poly_normalized = list(map(float, parts[1:]))
+
+            # Convert to pixel coordinates
+            poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
+
+            # Calculate simple Bbox from polygon (min/max x, min/max y)
+            xs = poly_pixels[0::2]
+            ys = poly_pixels[1::2]
+            x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
+            width, height = x_max - x_min, y_max - y_min
+
+            # Filter out annotations smaller than the threshold
+            if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
+                continue
+
+            poly_area = calculate_polygon_area(xs, ys)
+
+            coco_results.append({
+                "id": anno_id,
+                "image_id": image_id,
+                "category_id": class_id,
+                "segmentation": [poly_pixels],
+                "area": round(poly_area, 2),
+                "bbox": [round(x_min, 2), round(y_min, 2), round(width, 2), round(height, 2)],
+                "iscrowd": 0,
+                "ignore": 0
+            })
+            anno_id += 1
+
+    return coco_results

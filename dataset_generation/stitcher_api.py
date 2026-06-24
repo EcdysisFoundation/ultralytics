@@ -6,6 +6,8 @@ from pathlib import Path
 from dataset_generation.utils import (
     filter_transform_record,
     filter_transform_segmentation_record,
+    get_image_info,
+    convert_yolo_to_coco,
     FILE_MOUNT
 )
 
@@ -13,6 +15,7 @@ from dataset_generation.utils import (
 # STITCHER_URL = 'http://localhost:8090'
 # production url
 STITCHER_URL = 'http://ecdysis01.local:8090'
+CVAT_LABEL_DIR = '/pool1/srv/cvat-tasks'
 
 ERROR_MSG_KEY = 'ERROR'
 
@@ -155,7 +158,12 @@ def pano_object_detection_training_set():
         json.dump(coco_json_source, f)  # , indent=1
 
 
-def pano_segmentation_training_set(anno_size_gte=50):
+def pano_segmentation_training_set(
+        dataset_dir,
+        dataset_json,
+        coco_json_source,
+        test_flag,
+        anno_size_gte=50):
     """
     Use the api and get .json file of training set.
     anno_size_gte, if not None, filters annotations to have
@@ -169,27 +177,21 @@ def pano_segmentation_training_set(anno_size_gte=50):
     api_list_url = STITCHER_URL + '/list-upload-files/'
     offset = 0
     limit = 10
-    curr_dir = os.getcwd()
-    print(f'curr_dir: {curr_dir}')
-    curr_dir = os.getcwd()
-    dataset_dir = curr_dir + '/dataset_pano'
-    out_json = dataset_dir + '/dataset.json'
+    out_json = f'{dataset_dir}/{dataset_json}'
     print(f'out_json: {out_json}')
     dataset_path = Path(dataset_dir)
     source_img_dir = FILE_MOUNT
     print(f'source_img_dir: {source_img_dir}')
     source_img_path = Path(source_img_dir)
 
-    coco_json_source = {
-        "images": [],
-        "categories": [{
-            "supercategory": "Arthropod",
-            "id": 1,
-            "name": "arthropod"}],
-        "annotations": [],
-    }
+    img_index = 0
+    starting_anno_id = 0
 
     while True:
+        if test_flag:
+            # stop early for testing
+            if img_index > 10:
+                break
         params = {
             'offset': offset,
             'limit': limit,
@@ -222,7 +224,7 @@ def pano_segmentation_training_set(anno_size_gte=50):
                     # set some vars
                     original_width = row['annotations_segment'][0]['original_width']
                     original_height = row['annotations_segment'][0]['original_height']
-                    image_id = len(coco_json_source["images"])
+                    image_id = img_index
 
                     # prepare the image
                     file_name = row['panorama_path'].replace('/media/', '')
@@ -241,13 +243,120 @@ def pano_segmentation_training_set(anno_size_gte=50):
                     # convert and format the annotations and other info
                     r = filter_transform_segmentation_record(
                         row, image_id, original_width, original_height,
-                        anno_size_gte)
+                        anno_size_gte, starting_anno_id)
                     coco_json_source['images'].append({
                         "height": original_height,
                         "width": original_width,
                         "id": image_id,
                         "file_name": file_name})
                     coco_json_source['annotations'] += r['coco_annotations']
+                    starting_anno_id += max([v['id'] for v in r['coco_annotations']])
+                    img_index += 1
+
+            offset += limit
+        else:
+            print(f"Error: {response.status_code}")
+            break
+
+    with open(out_json, 'w') as f:
+        json.dump(coco_json_source, f)
+
+
+def pano_segmentation_training_set_fromyolo(
+        dataset_dir,
+        dataset_json,
+        coco_json_source,
+        test_flag,
+        anno_size_gte=50):
+    """
+    Use the api and get yolo .txt files of training set.
+    anno_size_gte, if not None, filters annotations to have
+    at least a width and height of the bounding box in
+    # of anno_size_gte pixels.
+    """
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
+        return
+    api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
+    offset = 0
+    limit = 10
+    out_json = f'{dataset_dir}/{dataset_json}'
+    print(f'out_json: {out_json}')
+    dataset_path = Path(dataset_dir)
+    source_img_dir = FILE_MOUNT
+    print(f'source_img_dir: {source_img_dir}')
+    source_img_path = Path(source_img_dir)
+
+    img_index = 0
+    starting_anno_id = 0
+
+    while True:
+        if test_flag:
+            # stop early for testing
+            if img_index > 10:
+                break
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+        print('-list-upload-files--abridged' * 6)
+        print(params)
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+
+            print(f'data returned from api for next {limit} records')
+            for row in data:
+                if row['omit_from_training']:
+                    continue
+                if not row['bugbox_croped_saved'] or row['bugbox_rejected']:
+                    continue
+                if not row['label_file'] or not row['label_project_dir']:
+                    continue
+                print(f"{row['upload_dir_name']} passed filtering, checking additional criteria")
+
+                # prepare the image
+                file_name = row['panorama_path'].replace('/media/', '')
+                file_name = file_name.replace('/panorama', '_panorama')
+                panorama_path = row['panorama_path'].replace('/media', '')
+                row['panorama_path'] = FILE_MOUNT + panorama_path
+                dst = dataset_path / file_name
+                src = source_img_path / row['panorama_path'].replace('/media', '')
+                label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
+                if src.is_file() and Path(label_path).is_file():
+                    if not dst.is_file():
+                        dst.symlink_to(src)
+
+                    img_info = get_image_info(dst, img_index)
+                    coco_anno = convert_yolo_to_coco(
+                        label_path,
+                        img_info['width'],
+                        img_info['height'],
+                        img_index,
+                        starting_anno_id,
+                        anno_size_gte)
+                    # only include images with at least one annotation
+                    if coco_anno:
+                        print(f"{row['upload_dir_name']} has annotations, including in dataset")
+                        coco_json_source["images"].append(img_info)
+                        coco_json_source['annotations'] += coco_anno
+                        img_index += 1
+                        starting_anno_id += max([v['id'] for v in coco_anno])
+                    else:
+                        print(f"{row['upload_dir_name']} has no annotations, skipping")
+                else:
+                    print(f'WARNING: skipping missing img at {src}')
+                    continue
 
             offset += limit
         else:

@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
 
 
-def create_clear_dirs(dataset_pano=False):
+def create_clear_dirs(dataset_pano=None):
     parent_images = Path(DATASETS_FOLDER) / 'images'
     parent_labels = Path(DATASETS_FOLDER) / 'labels'
 
@@ -28,7 +28,7 @@ def create_clear_dirs(dataset_pano=False):
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
     if dataset_pano:
-        dp_path = Path('dataset_pano')
+        dp_path = Path(dataset_pano)
         if os.path.exists(dp_path):
             shutil.rmtree(dp_path)
         dp_path.mkdir()
@@ -146,18 +146,18 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(label_dir, image_dir):
+def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
     """
     print('Starting split_by_labels_train_val')
-    dest_path = Path(DATASETS_FOLDER)
-    label_path = Path(label_dir)
+
+    label_path = Path(sliced_coco_json_dir)
     img_path = Path(image_dir)
-    img_val = dest_path / 'images/val'
-    img_train = dest_path / 'images/train'
-    label_val = dest_path / 'labels/val'
-    label_train = dest_path / 'labels/train'
+    img_val = base_dirs['parent_images'] / 'val'
+    img_train = base_dirs['parent_images'] / 'train'
+    label_val = base_dirs['parent_labels'] / 'val'
+    label_train = base_dirs['parent_labels'] / 'train'
     txt = '.txt'
 
     def copy_imgs(entries, img_set_path, label_set_path):
@@ -175,7 +175,7 @@ def split_by_labels_train_val(label_dir, image_dir):
                     print(f'Problem with {a}, will not be included in training')
                     print(Exception)
 
-    all_entries = os.listdir(label_dir)
+    all_entries = os.listdir(sliced_coco_json_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     val_entries = random.sample(all_entries, num_in_validation)
     train_entries = [v for v in all_entries if v not in val_entries]
