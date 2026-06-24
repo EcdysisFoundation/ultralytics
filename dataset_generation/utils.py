@@ -432,6 +432,19 @@ def yolo_to_coco_poly(yolo_poly, w, h):
     return [coord * w if i % 2 == 0 else coord * h for i, coord in enumerate(yolo_poly)]
 
 
+def calculate_polygon_area(xs, ys):
+    """Calculates the area of a polygon using the Shoelace formula."""
+    n = len(xs)
+    if n < 3:
+        return 0.0
+    area = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        area += xs[i] * ys[j]
+        area -= xs[j] * ys[i]
+    return abs(area) / 2.0
+
+
 def convert_yolo_to_coco(
         yolo_file,
         image_width,
@@ -447,9 +460,11 @@ def convert_yolo_to_coco(
     anno_id = starting_anno_id + 1
     with open(yolo_file, 'r') as f:
         for line in f:
-            parts = list(map(float, line.strip().split()))
+            parts = line.strip().split()
+            if not parts or len(parts) < 7:  # A valid polygon needs at least 3 points (1 class + 6 coords)
+                continue
             class_id = int(parts[0]) + 1
-            poly_normalized = parts[1:]
+            poly_normalized = list(map(float, parts[1:]))
 
             # Convert to pixel coordinates
             poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
@@ -460,17 +475,19 @@ def convert_yolo_to_coco(
             x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
             width, height = x_max - x_min, y_max - y_min
 
-            # require annotation size greater than or equal to anno_size_gte
+            # Filter out annotations smaller than the threshold
             if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
                 continue
+
+            poly_area = calculate_polygon_area(xs, ys)
 
             coco_results.append({
                 "id": anno_id,
                 "image_id": image_id,
                 "category_id": class_id,
                 "segmentation": [poly_pixels],
-                "area": int(width * height),  # Simplified area
-                "bbox": [int(v) for v in [x_min, y_min, width, height]],
+                "area": round(poly_area, 2),
+                "bbox": [round(x_min, 2), round(y_min, 2), round(width, 2), round(height, 2)],
                 "iscrowd": 0,
                 "ignore": 0
             })
