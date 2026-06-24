@@ -184,11 +184,13 @@ def pano_segmentation_training_set(
     print(f'source_img_dir: {source_img_dir}')
     source_img_path = Path(source_img_dir)
 
-    img_count = 0
+    img_index = 0
+    starting_anno_id = 0
+
     while True:
         if test_flag:
             # stop early for testing
-            if img_count > 10:
+            if img_index > 10:
                 break
         params = {
             'offset': offset,
@@ -222,7 +224,7 @@ def pano_segmentation_training_set(
                     # set some vars
                     original_width = row['annotations_segment'][0]['original_width']
                     original_height = row['annotations_segment'][0]['original_height']
-                    image_id = len(coco_json_source["images"])
+                    image_id = img_index
 
                     # prepare the image
                     file_name = row['panorama_path'].replace('/media/', '')
@@ -241,14 +243,15 @@ def pano_segmentation_training_set(
                     # convert and format the annotations and other info
                     r = filter_transform_segmentation_record(
                         row, image_id, original_width, original_height,
-                        anno_size_gte)
+                        anno_size_gte, starting_anno_id)
                     coco_json_source['images'].append({
                         "height": original_height,
                         "width": original_width,
                         "id": image_id,
                         "file_name": file_name})
                     coco_json_source['annotations'] += r['coco_annotations']
-                    img_count += 1
+                    starting_anno_id += max([v['id'] for v in r['coco_annotations']])
+                    img_index += 1
 
             offset += limit
         else:
