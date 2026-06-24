@@ -117,7 +117,7 @@ if __name__ == '__main__':
     dataset_dir = f'{curr_dir}/{DATASET_PANO}'
     slice_dir = f'{DATASET_PANO}/sliced'
     dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
-    sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco_json_coco'
+    sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
 
     # avoid DecompressionBombError
     max_image_pixels = Image.MAX_IMAGE_PIXELS
