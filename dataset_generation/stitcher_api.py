@@ -158,7 +158,12 @@ def pano_object_detection_training_set():
         json.dump(coco_json_source, f)  # , indent=1
 
 
-def pano_segmentation_training_set(anno_size_gte=50):
+def pano_segmentation_training_set(
+        dataset_dir,
+        dataset_json,
+        coco_json_source,
+        test_flag,
+        anno_size_gte=50):
     """
     Use the api and get .json file of training set.
     anno_size_gte, if not None, filters annotations to have
@@ -172,26 +177,19 @@ def pano_segmentation_training_set(anno_size_gte=50):
     api_list_url = STITCHER_URL + '/list-upload-files/'
     offset = 0
     limit = 10
-    curr_dir = os.getcwd()
-    print(f'curr_dir: {curr_dir}')
-    dataset_dir = curr_dir + '/dataset_pano'
-    out_json = dataset_dir + '/dataset.json'
+    out_json = f'{dataset_dir}/{dataset_json}'
     print(f'out_json: {out_json}')
     dataset_path = Path(dataset_dir)
     source_img_dir = FILE_MOUNT
     print(f'source_img_dir: {source_img_dir}')
     source_img_path = Path(source_img_dir)
 
-    coco_json_source = {
-        "images": [],
-        "categories": [{
-            "supercategory": "Arthropod",
-            "id": 1,
-            "name": "arthropod"}],
-        "annotations": [],
-    }
-
+    img_count = 0
     while True:
+        if test_flag:
+            # stop early for testing
+            if img_count > 10:
+                break
         params = {
             'offset': offset,
             'limit': limit,
@@ -250,6 +248,7 @@ def pano_segmentation_training_set(anno_size_gte=50):
                         "id": image_id,
                         "file_name": file_name})
                     coco_json_source['annotations'] += r['coco_annotations']
+                    img_count += 1
 
             offset += limit
         else:
@@ -264,6 +263,7 @@ def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
         coco_json_source,
+        test_flag,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -289,9 +289,10 @@ def pano_segmentation_training_set_fromyolo(
     starting_anno_id = 0
 
     while True:
-        # stop early for temp testing
-        if img_index > 10:
-            break
+        if test_flag:
+            # stop early for testing
+            if img_index > 10:
+                break
         params = {
             'offset': offset,
             'limit': limit,

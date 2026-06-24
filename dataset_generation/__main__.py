@@ -13,7 +13,7 @@ from ultralytics.data.converter import convert_coco
 from PIL import Image
 
 from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
-from .stitcher_api import pano_segmentation_training_set_fromyolo
+from .stitcher_api import pano_segmentation_training_set_fromyolo, pano_segmentation_training_set
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -31,6 +31,9 @@ COCO_JSON_SOURCE = {
         "annotations": [],
     }
 
+PLATFORM_CVAT = 'cvat'
+PLATFORM_LABEL_STUDIO = 'label-studio'
+
 
 def get_args() -> argparse.Namespace:
 
@@ -40,6 +43,10 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-cpy', '--copy-files', action='store_true')
+    parser.add_argument(
+        '--label-platform',
+        choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
+        default=PLATFORM_CVAT)
 
     return parser.parse_args()
 
@@ -103,6 +110,7 @@ if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
+    args = get_args()
     curr_dir = os.getcwd()
     coco_conv_dir = '{DATASET_PANO}/coco_converted'
     dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
@@ -119,10 +127,21 @@ if __name__ == '__main__':
         print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
     base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
-    pano_segmentation_training_set_fromyolo(
-        dataset_dir,
-        DATASET_JSON,
-        copy.deepcopy(COCO_JSON_SOURCE))
+    if args.label_platform == PLATFORM_CVAT:
+        pano_segmentation_training_set_fromyolo(
+            dataset_dir,
+            DATASET_JSON,
+            copy.deepcopy(COCO_JSON_SOURCE),
+            args.test_flag)
+    elif args.label_platform == PLATFORM_LABEL_STUDIO:
+        pano_segmentation_training_set(
+            dataset_dir,
+            DATASET_JSON,
+            copy.deepcopy(COCO_JSON_SOURCE),
+            args.test_flag
+        )
+    else:
+        print(f'--label-platform {args.label_platform} not supported')
     slice_pano_training_set(
         dataset_dir,
         dataset_json_dir,
