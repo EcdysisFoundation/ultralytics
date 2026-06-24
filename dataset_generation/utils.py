@@ -400,9 +400,9 @@ def filter_transform_segmentation_record(row, image_id, width, height, anno_size
     """
     if not row['annotations_segment']:
         return
-
+    anno_id = starting_anno_id + 1
     coco_annotations = [convert_ls_polygonlabels_to_coco(
-        starting_anno_id + i, image_id,
+        anno_id + i, image_id,
         v['points'], width, height) for i, v in enumerate(row['annotations_segment'])]
     if anno_size_gte:
         # filter out small annotations
@@ -448,7 +448,7 @@ def convert_yolo_to_coco(
     with open(yolo_file, 'r') as f:
         for line in f:
             parts = list(map(float, line.strip().split()))
-            class_id = int(parts[0])
+            class_id = int(parts[0]) + 1
             poly_normalized = parts[1:]
 
             # Convert to pixel coordinates
