@@ -13,7 +13,9 @@ from ultralytics.data.converter import convert_coco
 from PIL import Image
 
 from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
-from .stitcher_api import pano_segmentation_training_set_fromyolo, pano_segmentation_training_set
+from .stitcher_api import (
+    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs
+)
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -42,6 +44,7 @@ def get_args() -> argparse.Namespace:
         '--class-col', type=str, default='specimen__classification__gbif_order',
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
+    parser.add_argument('-c', '--count-only', action='store_true')
     parser.add_argument('-cpy', '--copy-files', action='store_true')
     parser.add_argument(
         '--label-platform',
@@ -105,12 +108,8 @@ def slice_pano_training_set(
     print('slice_pano_training_set done')
 
 
-# run with `python -m dataset_generation`
-if __name__ == '__main__':
-    """
-    Assumes running from ultralytics home dir with 'python -m dataset_generation'
-    """
-    args = get_args()
+def main(args):
+
     curr_dir = os.getcwd()
     coco_conv_dir = f'{DATASET_PANO}/coco_converted'
     dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
@@ -152,3 +151,16 @@ if __name__ == '__main__':
         save_dir=coco_conv_dir,
         use_segments=True)
     split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs)
+
+
+# run with `python -m dataset_generation`
+if __name__ == '__main__':
+    """
+    Assumes running from ultralytics home dir with 'python -m dataset_generation'
+    """
+    args = get_args()
+
+    initial_count = count_initial_training_recs()
+    if initial_count and not args.count_only:
+        main()
+

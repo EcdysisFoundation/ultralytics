@@ -262,6 +262,58 @@ def pano_segmentation_training_set(
         json.dump(coco_json_source, f)
 
 
+def get_filtering_status(row):
+    if row['omit_from_training']:
+        return False
+    if not row['bugbox_croped_saved'] or row['bugbox_rejected']:
+        return False
+    if not row['label_file'] or not row['label_project_dir']:
+        return False
+    return True
+
+
+def count_initial_training_recs():
+    api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
+    passed_recs = 0
+    offset = 0
+    limit = 100
+
+    while True:
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+        print('-list-upload-files--abridged' * 6)
+        print(params)
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+
+            print(f'data returned from api for next {limit} records')
+            for row in data:
+                filtering_status = get_filtering_status(row)
+                if not filtering_status:
+                    continue
+                passed_recs += 1
+
+            offset += limit
+
+        else:
+            print(f"Error: {response.status_code}")
+            break
+    print(f'Found {passed_recs} panoramas that pass initial filtering.')
+    return passed_recs
+
+
 def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
@@ -317,12 +369,10 @@ def pano_segmentation_training_set_fromyolo(
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                if row['omit_from_training']:
+                filtering_status = get_filtering_status(row)
+                if not filtering_status:
                     continue
-                if not row['bugbox_croped_saved'] or row['bugbox_rejected']:
-                    continue
-                if not row['label_file'] or not row['label_project_dir']:
-                    continue
+
                 print(f"{row['upload_dir_name']} passed filtering, checking additional criteria")
 
                 # prepare the image
