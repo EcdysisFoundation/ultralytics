@@ -320,7 +320,8 @@ def count_initial_training_recs():
             print(f"Error: {response.status_code}")
             break
     print(f'Found {passed_recs} panoramas that pass initial filtering.')
-    print(f"For reasons: {Counter(reasons)}")
+    the_reasons = Counter(reasons)
+    print(f"For reasons: {the_reasons}")
     return passed_recs
 
 
