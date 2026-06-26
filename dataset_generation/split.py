@@ -105,7 +105,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
 def split_from_df(
         df: pd.DataFrame,
         args,
-        train_size=0.9):
+        train_size=0.8):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
     group (stratification).
@@ -121,7 +121,7 @@ def split_from_df(
     if not 0.0 < train_size <= 1.0:
         raise ValueError('Train size must be between 0 and 1')
 
-    df=df.copy()
+    df = df.copy()
 
     df.replace('', np.nan, inplace=True)  # Handle empty strings
     classes = df[args.class_col].drop_duplicates()
@@ -136,9 +136,9 @@ def split_from_df(
         if not check_minimum_length(image_list, train_size):
             print('Not enough images for class: {0}, skipping this one'.format(c))
             continue
-        train, val = train_test_split(image_list, train_size=train_size, random_state=SEED)
+        train, val, test = train_test_split(image_list, train_size=train_size, random_state=SEED)
 
-        splits[c] = {'train': train, 'val': val, 'test': []}
+        splits[c] = {'train': train, 'val': val, 'test': test}
 
         save_class_images(splits, c, df, class_to_index, dirs, args)
 
@@ -156,8 +156,10 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     img_path = Path(image_dir)
     img_val = base_dirs['parent_images'] / 'val'
     img_train = base_dirs['parent_images'] / 'train'
+    img_test = base_dirs['parent_images'] / 'test'
     label_val = base_dirs['parent_labels'] / 'val'
     label_train = base_dirs['parent_labels'] / 'train'
+    label_test = base_dirs['parent_labels'] / 'test'
     txt = '.txt'
 
     def copy_imgs(entries, img_set_path, label_set_path):
@@ -177,10 +179,14 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
 
     all_entries = os.listdir(sliced_coco_json_dir)
     num_in_validation = int(len(all_entries) * 0.2)
-    val_entries = random.sample(all_entries, num_in_validation)
+    random_entries = random.sample(all_entries, num_in_validation)
+    val_entries = random.sample(random_entries, num_in_validation * 0.5)
+    test_entries = [v for v in random_entries if v not in val_entries]
     train_entries = [v for v in all_entries if v not in val_entries]
     copy_imgs(val_entries, img_val, label_val)
     copy_imgs(train_entries, img_train, label_train)
+    copy_imgs(test_entries, img_test, label_test)
     print(f'copied {len(val_entries)} val_entries')
     print(f'copied {len(train_entries)} train_entries')
+    print(f'copied {len(test_entries)} test_entries')
     print('Completed split_by_labels_train_val.')
