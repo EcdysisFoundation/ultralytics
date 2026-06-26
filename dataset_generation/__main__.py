@@ -162,5 +162,4 @@ if __name__ == '__main__':
 
     initial_count = count_initial_training_recs()
     if initial_count and not args.count_only:
-        main()
-
+        main(args)
