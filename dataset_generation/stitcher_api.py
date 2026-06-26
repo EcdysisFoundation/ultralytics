@@ -267,13 +267,10 @@ def get_filtering_reason(row):
     filtering_reason = None
     if row['omit_from_training']:
         filtering_reason = 'omit_from_training'
-        return False
     elif not row['bugbox_croped_saved'] or row['bugbox_rejected']:
         filtering_reason = 'not_completed'
-        return False
     elif not row['label_file'] or not row['label_project_dir']:
         filtering_reason = 'no_label'
-        return False
     return filtering_reason
 
 
