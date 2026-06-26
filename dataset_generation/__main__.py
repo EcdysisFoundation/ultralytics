@@ -46,6 +46,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
     parser.add_argument('-cpy', '--copy-files', action='store_true')
+    parser.add_arguments('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
@@ -150,7 +151,7 @@ def main(args):
         cls91to80=False,
         save_dir=coco_conv_dir,
         use_segments=True)
-    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs)
+    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.itestset)
 
 
 # run with `python -m dataset_generation`

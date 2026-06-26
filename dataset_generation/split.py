@@ -146,7 +146,7 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
+def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itestset):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
     """
@@ -156,10 +156,13 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     img_path = Path(image_dir)
     img_val = base_dirs['parent_images'] / 'val'
     img_train = base_dirs['parent_images'] / 'train'
-    img_test = base_dirs['parent_images'] / 'test'
     label_val = base_dirs['parent_labels'] / 'val'
     label_train = base_dirs['parent_labels'] / 'train'
-    label_test = base_dirs['parent_labels'] / 'test'
+
+    if itestset:
+        img_test = base_dirs['parent_images'] / 'test'
+        label_test = base_dirs['parent_labels'] / 'test'
+
     txt = '.txt'
 
     def copy_imgs(entries, img_set_path, label_set_path):
@@ -180,14 +183,17 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     all_entries = os.listdir(sliced_coco_json_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     random_entries = random.sample(all_entries, num_in_validation)
-    num_half_random = int(len(random_entries) * 0.5)
-    val_entries = random.sample(random_entries, num_half_random)
-    test_entries = [v for v in random_entries if v not in val_entries]
+    if itestset:
+        num_half_random = int(len(random_entries) * 0.5)
+        val_entries = random.sample(random_entries, num_half_random)
+        test_entries = [v for v in random_entries if v not in val_entries]
+        copy_imgs(test_entries, img_test, label_test)
+        print(f'copied {len(test_entries)} test_entries')
+    else:
+        val_entries = random_entries
     train_entries = [v for v in all_entries if v not in val_entries]
     copy_imgs(val_entries, img_val, label_val)
     copy_imgs(train_entries, img_train, label_train)
-    copy_imgs(test_entries, img_test, label_test)
     print(f'copied {len(val_entries)} val_entries')
     print(f'copied {len(train_entries)} train_entries')
-    print(f'copied {len(test_entries)} test_entries')
     print('Completed split_by_labels_train_val.')
