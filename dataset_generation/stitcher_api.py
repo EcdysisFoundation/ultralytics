@@ -2,6 +2,7 @@ import json
 import os
 import requests
 from pathlib import Path
+from collections import Counter
 
 from dataset_generation.utils import (
     filter_transform_record,
@@ -262,19 +263,26 @@ def pano_segmentation_training_set(
         json.dump(coco_json_source, f)
 
 
-def get_filtering_status(row):
+def get_filtering_reason(row):
+    filtering_reason = None
     if row['omit_from_training']:
+        filtering_reason = 'omit_from_training'
         return False
-    if not row['bugbox_croped_saved'] or row['bugbox_rejected']:
+    elif not row['bugbox_croped_saved'] or row['bugbox_rejected']:
+        filtering_reason = 'not_completed'
         return False
-    if not row['label_file'] or not row['label_project_dir']:
+    elif not row['label_file'] or not row['label_project_dir']:
+        filtering_reason = 'no_label'
         return False
-    return True
+    return filtering_reason
 
 
 def count_initial_training_recs():
     api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
+
+    reasons = []
     passed_recs = 0
+
     offset = 0
     limit = 100
 
@@ -300,8 +308,9 @@ def count_initial_training_recs():
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                filtering_status = get_filtering_status(row)
-                if not filtering_status:
+                filtering_reason = get_filtering_reason(row)
+                if filtering_reason:
+                    reasons.append(filtering_reason)
                     continue
                 passed_recs += 1
 
@@ -311,6 +320,7 @@ def count_initial_training_recs():
             print(f"Error: {response.status_code}")
             break
     print(f'Found {passed_recs} panoramas that pass initial filtering.')
+    print(f"For reasons: {Counter(reasons)}")
     return passed_recs
 
 
@@ -369,8 +379,8 @@ def pano_segmentation_training_set_fromyolo(
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                filtering_status = get_filtering_status(row)
-                if not filtering_status:
+                filtering_reason = get_filtering_reason(row)
+                if filtering_reason:
                     continue
 
                 print(f"{row['upload_dir_name']} passed filtering, checking additional criteria")
