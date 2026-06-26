@@ -282,15 +282,13 @@ def count_initial_training_recs():
 
     offset = 0
     limit = 100
-
+    print('Counting records to pass initial filtering')
     while True:
         params = {
             'offset': offset,
             'limit': limit,
             'approved': True
         }
-        print('-list-upload-files--abridged' * 6)
-        print(params)
 
         try:
             response = requests.get(api_list_url, params=params)
@@ -302,8 +300,6 @@ def count_initial_training_recs():
             data = response.json()
             if not data:
                 break
-
-            print(f'data returned from api for next {limit} records')
             for row in data:
                 filtering_reason = get_filtering_reason(row)
                 if filtering_reason:
