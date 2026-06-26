@@ -180,7 +180,8 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     all_entries = os.listdir(sliced_coco_json_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     random_entries = random.sample(all_entries, num_in_validation)
-    val_entries = random.sample(random_entries, num_in_validation * 0.5)
+    num_half_random = int(len(random_entries) * 0.5)
+    val_entries = random.sample(random_entries, num_half_random)
     test_entries = [v for v in random_entries if v not in val_entries]
     train_entries = [v for v in all_entries if v not in val_entries]
     copy_imgs(val_entries, img_val, label_val)
