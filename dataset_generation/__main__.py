@@ -48,7 +48,7 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
-    parser.add_arguments('-itestset', '--include-testset', action='store_true')
+    parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
@@ -159,7 +159,7 @@ def main(args):
     split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.itestset)
 
 
-# run with `python -m dataset_generation`
+# run with `python -m dataset_generation -t`
 if __name__ == '__main__':
     """
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
