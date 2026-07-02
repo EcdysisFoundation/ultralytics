@@ -136,8 +136,8 @@ def main(args):
             dataset_dir,
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
-            eval_dirs,
-            args.test_flag)
+            args.test_flag,
+            eval_dirs)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(
             dataset_dir,
