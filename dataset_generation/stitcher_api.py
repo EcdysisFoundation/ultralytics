@@ -323,6 +323,7 @@ def pano_segmentation_training_set_fromyolo(
         dataset_json,
         coco_json_source,
         test_flag,
+        eval_dirs,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -346,6 +347,8 @@ def pano_segmentation_training_set_fromyolo(
 
     img_index = 0
     starting_anno_id = 0
+    total_img_count = 0
+    eval_img_count = 0
 
     while True:
         if test_flag:
@@ -388,8 +391,19 @@ def pano_segmentation_training_set_fromyolo(
                 src = source_img_path / row['panorama_path'].replace('/media', '')
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
-                    if not dst.is_file():
-                        dst.symlink_to(src)
+
+                    if (total_img_count % 10) == 0:
+                        # include full image in test evaluation dataset
+                        label_name = f"{Path(file_name).name}.txt"
+                        eval_img_dst = eval_dirs['images_path'] / file_name
+                        eval_label_dst = eval_dirs['labels_path'] / label_name
+                        eval_img_dst.symlink_to(src)
+                        eval_label_dst.symlink_to()
+                        total_img_count += 1
+                        eval_img_count += 1
+                        continue
+
+                    dst.symlink_to(src)
 
                     img_info = get_image_info(dst, img_index)
                     coco_anno = convert_yolo_to_coco(
@@ -405,6 +419,7 @@ def pano_segmentation_training_set_fromyolo(
                         coco_json_source["images"].append(img_info)
                         coco_json_source['annotations'] += coco_anno
                         img_index += 1
+                        total_img_count += 1
                         starting_anno_id += max([v['id'] for v in coco_anno])
                     else:
                         print(f"{row['upload_dir_name']} has no annotations, skipping")

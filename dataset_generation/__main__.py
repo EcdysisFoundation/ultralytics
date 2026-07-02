@@ -12,7 +12,10 @@ from ultralytics.data.converter import convert_coco
 
 from PIL import Image
 
-from .split import create_clear_dirs, split_from_df, split_by_labels_train_val, DATASETS_FOLDER
+from .split import (
+    create_clear_dirs, create_clear_dirs_eval, split_from_df,
+    split_by_labels_train_val, DATASETS_FOLDER
+)
 from .stitcher_api import (
     pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs
 )
@@ -45,7 +48,6 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
-    parser.add_argument('-cpy', '--copy-files', action='store_true')
     parser.add_arguments('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
@@ -118,6 +120,7 @@ def main(args):
     slice_dir = f'{DATASET_PANO}/sliced'
     dataset_sliced_dir = f'{curr_dir}/{slice_dir}'
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
+    eval_dataset_dir = f'{curr_dir}/eval_dataset_pano'
 
     # avoid DecompressionBombError
     max_image_pixels = Image.MAX_IMAGE_PIXELS
@@ -128,10 +131,12 @@ def main(args):
 
     base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
     if args.label_platform == PLATFORM_CVAT:
+        eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
         pano_segmentation_training_set_fromyolo(
             dataset_dir,
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
+            eval_dirs,
             args.test_flag)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(

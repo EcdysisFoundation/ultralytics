@@ -46,6 +46,22 @@ def create_clear_dirs(dataset_pano=None):
     }
 
 
+def create_clear_dirs_eval(eval_dataset_dir):
+    images_path = Path(eval_dataset_dir) / 'images' / 'test'
+    labels_path = Path(eval_dataset_dir) / 'labels' / 'test'
+    if os.path.exists(images_path):
+        shutil.rmtree(images_path)
+    if os.path.exists(labels_path):
+        shutil.rmtree(labels_path)
+    images_path.mkdir(images_path)
+    labels_path.mkdir(labels_path)
+
+    return {
+        'images_path': images_path,
+        'labels_path': labels_path
+    }
+
+
 def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     """
     Save images of a class divided in splits
