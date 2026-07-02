@@ -53,8 +53,8 @@ def create_clear_dirs_eval(eval_dataset_dir):
         shutil.rmtree(images_path)
     if os.path.exists(labels_path):
         shutil.rmtree(labels_path)
-    images_path.mkdir(images_path)
-    labels_path.mkdir(labels_path)
+    images_path.mkdir(parents=True)
+    labels_path.mkdir(parents=True)
 
     return {
         'images_path': images_path,
