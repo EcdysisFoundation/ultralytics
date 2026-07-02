@@ -398,7 +398,7 @@ def pano_segmentation_training_set_fromyolo(
                         eval_img_dst = eval_dirs['images_path'] / file_name
                         eval_label_dst = eval_dirs['labels_path'] / label_name
                         eval_img_dst.symlink_to(src)
-                        eval_label_dst.symlink_to()
+                        eval_label_dst.symlink_to(Path(label_path))
                         total_img_count += 1
                         eval_img_count += 1
                         continue
