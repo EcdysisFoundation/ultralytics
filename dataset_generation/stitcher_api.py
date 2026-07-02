@@ -394,7 +394,8 @@ def pano_segmentation_training_set_fromyolo(
 
                     if (total_img_count % 10) == 0:
                         print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
-                        label_name = f"{Path(file_name).name}.txt"
+                        label_name_base, _ = os.path.splitext(file_name)
+                        label_name = f"{label_name_base}.txt"
                         eval_img_dst = eval_dirs['images_path'] / file_name
                         eval_label_dst = eval_dirs['labels_path'] / label_name
                         eval_img_dst.symlink_to(src)
