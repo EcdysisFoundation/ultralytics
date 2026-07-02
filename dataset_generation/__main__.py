@@ -156,7 +156,7 @@ def main(args):
         cls91to80=False,
         save_dir=coco_conv_dir,
         use_segments=True)
-    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.itestset)
+    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
 
 
 # run with `python -m dataset_generation -t`
