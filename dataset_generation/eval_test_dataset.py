@@ -120,7 +120,7 @@ def eval_test_dataset(eval_dirs):
     convert_to_coco_lite(
         eval_dirs['images_path'],
         eval_dirs['labels_path'],
-        f'{eval_dirs['dataset_dir']}/dataset_test.json',
+        f"{eval_dirs['dataset_dir']}/dataset_test.json",
         CLASS_NAMES_COCO)
 
 
