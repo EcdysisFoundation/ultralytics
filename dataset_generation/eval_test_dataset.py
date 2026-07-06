@@ -126,6 +126,14 @@ def eval_test_dataset(eval_dirs):
 
 if __name__ == '__main__':
     # to test ..
+
+    # avoid DecompressionBombError
+    max_image_pixels = Image.MAX_IMAGE_PIXELS
+    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
+    if max_image_pixels < 180000000:
+        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
+        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
+
     curr_dir = os.getcwd()
     eval_dirs = {
             'dataset_dir': 'eval_dataset_pano',
