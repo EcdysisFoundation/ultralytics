@@ -1,3 +1,5 @@
+import os
+import yaml
 from collections import Counter
 from pathlib import Path
 
@@ -19,17 +21,40 @@ def get_label_stats(label_dir):
     return stats
 
 
-def eval_test_dataset(eval_dirs):
+def create_yaml(dataset_dir):
     """
-        eval_dirs = {
-            'images_path': '/eval_dataset_pano/images/test',
-            'labels_path': '/eval_dataset_pano/labels/test'
-        }
+    Generates the data.yaml file required for YOLO training.
     """
+    dataset_root = Path(dataset_dir)
+    yaml_content = {
+        'path': str(dataset_root.absolute()),
+        'train': 'images/train',
+        'val': 'images/val',
+        'test': 'images/test',
+        'names': CLASS_NAMES_COCO
+    }
 
+    yaml_path = dataset_root / 'data.yaml'
+
+    with open(yaml_path, 'w') as f:
+        yaml.dump(yaml_content, f, default_flow_style=False, sort_keys=False)
+
+    print(f"Successfully created metadata: {yaml_path}")
+
+
+def eval_test_dataset(eval_dirs):
     stats = get_label_stats(eval_dirs['labels_path'])
     print(f"Class distribution in labels_path: {stats}")
 
+    create_yaml(eval_dirs['dataset_dir'])
+
 
 if __name__ == '__main__':
-    eval_test_dataset()
+    # to test ..
+    curr_dir = os.getcwd()
+    eval_dirs = {
+            'dataset_dir': 'eval_dataset_pano',
+            'images_path': f'{curr_dir}/eval_dataset_pano/images/test',
+            'labels_path': f'{curr_dir}/eval_dataset_pano/labels/test'
+        }
+    eval_test_dataset(eval_dirs)

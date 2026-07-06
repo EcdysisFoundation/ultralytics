@@ -43,6 +43,9 @@ conda install -y -c pytorch -c nvidia -c conda-forge \
 
 `conda install -y -c conda-forge "mkl<2024.1"`
 
+8. Optional minor pip installations go last?
+`pip install pyyaml`
+
 [!TIP]
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. Integrations like SAHI may require many specific configurations as seen above. To avoid problems with Ultralytics, try to only use the libraries it includes and the minimum needed to run SAHI.
 

@@ -57,6 +57,7 @@ def create_clear_dirs_eval(eval_dataset_dir):
     labels_path.mkdir(parents=True)
 
     return {
+        'dataset_dir': eval_dataset_dir,
         'images_path': images_path,
         'labels_path': labels_path
     }
