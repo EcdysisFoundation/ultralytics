@@ -19,6 +19,7 @@ from .split import (
 from .stitcher_api import (
     pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs
 )
+from .eval_test_dataset import eval_test_dataset
 from .data import ObjectDetectData
 from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
 
@@ -151,7 +152,7 @@ def main(args):
         use_segments=True)
     split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
 
-    # next, handle the eval_dirs files
+    eval_test_dataset(eval_dirs)
 
 
 # run with `python -m dataset_generation -t`
