@@ -2,6 +2,7 @@ import json
 import os
 import requests
 from pathlib import Path
+from collections import Counter
 
 from dataset_generation.utils import (
     filter_transform_record,
@@ -262,11 +263,67 @@ def pano_segmentation_training_set(
         json.dump(coco_json_source, f)
 
 
+def get_filtering_reason(row):
+    filtering_reason = None
+    if not row['label_file'] or not row['label_project_dir']:
+        filtering_reason = 'no_label'
+    elif not row['bugbox_croped_saved'] or row['bugbox_rejected']:
+        filtering_reason = 'not_completed'
+    elif row['omit_from_training']:
+        filtering_reason = 'omit_from_training'
+    return filtering_reason
+
+
+def count_initial_training_recs():
+    api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
+
+    reasons = []
+    passed_recs = 0
+
+    offset = 0
+    limit = 100
+    print('Counting records to pass initial filtering')
+    while True:
+        params = {
+            'offset': offset,
+            'limit': limit,
+            'approved': True
+        }
+
+        try:
+            response = requests.get(api_list_url, params=params)
+        except Exception as e:
+            print(e)
+            break
+
+        if response.status_code == 200:
+            data = response.json()
+            if not data:
+                break
+            for row in data:
+                filtering_reason = get_filtering_reason(row)
+                if filtering_reason:
+                    reasons.append(filtering_reason)
+                    continue
+                passed_recs += 1
+
+            offset += limit
+
+        else:
+            print(f"Error: {response.status_code}")
+            break
+    print(f'Found {passed_recs} panoramas that pass initial filtering.')
+    the_reasons = Counter(reasons)
+    print(f"For reasons: {the_reasons}")
+    return passed_recs
+
+
 def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
         coco_json_source,
         test_flag,
+        eval_dirs,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -290,6 +347,8 @@ def pano_segmentation_training_set_fromyolo(
 
     img_index = 0
     starting_anno_id = 0
+    total_img_count = 0
+    eval_img_count = 0
 
     while True:
         if test_flag:
@@ -317,12 +376,10 @@ def pano_segmentation_training_set_fromyolo(
 
             print(f'data returned from api for next {limit} records')
             for row in data:
-                if row['omit_from_training']:
+                filtering_reason = get_filtering_reason(row)
+                if filtering_reason:
                     continue
-                if not row['bugbox_croped_saved'] or row['bugbox_rejected']:
-                    continue
-                if not row['label_file'] or not row['label_project_dir']:
-                    continue
+
                 print(f"{row['upload_dir_name']} passed filtering, checking additional criteria")
 
                 # prepare the image
@@ -334,8 +391,20 @@ def pano_segmentation_training_set_fromyolo(
                 src = source_img_path / row['panorama_path'].replace('/media', '')
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
-                    if not dst.is_file():
-                        dst.symlink_to(src)
+
+                    if (total_img_count % 10) == 0:
+                        print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
+                        label_name_base, _ = os.path.splitext(file_name)
+                        label_name = f"{label_name_base}.txt"
+                        eval_img_dst = eval_dirs['images_path'] / file_name
+                        eval_label_dst = eval_dirs['labels_path'] / label_name
+                        eval_img_dst.symlink_to(src)
+                        eval_label_dst.symlink_to(Path(label_path))
+                        total_img_count += 1
+                        eval_img_count += 1
+                        continue
+
+                    dst.symlink_to(src)
 
                     img_info = get_image_info(dst, img_index)
                     coco_anno = convert_yolo_to_coco(
@@ -351,6 +420,7 @@ def pano_segmentation_training_set_fromyolo(
                         coco_json_source["images"].append(img_info)
                         coco_json_source['annotations'] += coco_anno
                         img_index += 1
+                        total_img_count += 1
                         starting_anno_id += max([v['id'] for v in coco_anno])
                     else:
                         print(f"{row['upload_dir_name']} has no annotations, skipping")

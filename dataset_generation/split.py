@@ -46,6 +46,23 @@ def create_clear_dirs(dataset_pano=None):
     }
 
 
+def create_clear_dirs_eval(eval_dataset_dir):
+    images_path = Path(eval_dataset_dir) / 'images' / 'test'
+    labels_path = Path(eval_dataset_dir) / 'labels' / 'test'
+    if os.path.exists(images_path):
+        shutil.rmtree(images_path)
+    if os.path.exists(labels_path):
+        shutil.rmtree(labels_path)
+    images_path.mkdir(parents=True)
+    labels_path.mkdir(parents=True)
+
+    return {
+        'dataset_dir': eval_dataset_dir,
+        'images_path': images_path,
+        'labels_path': labels_path
+    }
+
+
 def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     """
     Save images of a class divided in splits
@@ -105,7 +122,7 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
 def split_from_df(
         df: pd.DataFrame,
         args,
-        train_size=0.9):
+        train_size=0.8):
     """
     Split images of a dataset in train/val/test. The splitting preserves the distribution of samples per class in each
     group (stratification).
@@ -121,7 +138,7 @@ def split_from_df(
     if not 0.0 < train_size <= 1.0:
         raise ValueError('Train size must be between 0 and 1')
 
-    df=df.copy()
+    df = df.copy()
 
     df.replace('', np.nan, inplace=True)  # Handle empty strings
     classes = df[args.class_col].drop_duplicates()
@@ -136,9 +153,9 @@ def split_from_df(
         if not check_minimum_length(image_list, train_size):
             print('Not enough images for class: {0}, skipping this one'.format(c))
             continue
-        train, val = train_test_split(image_list, train_size=train_size, random_state=SEED)
+        train, val, test = train_test_split(image_list, train_size=train_size, random_state=SEED)
 
-        splits[c] = {'train': train, 'val': val, 'test': []}
+        splits[c] = {'train': train, 'val': val, 'test': test}
 
         save_class_images(splits, c, df, class_to_index, dirs, args)
 
@@ -146,7 +163,7 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
+def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itestset):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
     """
@@ -158,6 +175,11 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
     img_train = base_dirs['parent_images'] / 'train'
     label_val = base_dirs['parent_labels'] / 'val'
     label_train = base_dirs['parent_labels'] / 'train'
+
+    if itestset:
+        img_test = base_dirs['parent_images'] / 'test'
+        label_test = base_dirs['parent_labels'] / 'test'
+
     txt = '.txt'
 
     def copy_imgs(entries, img_set_path, label_set_path):
@@ -177,7 +199,15 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs):
 
     all_entries = os.listdir(sliced_coco_json_dir)
     num_in_validation = int(len(all_entries) * 0.2)
-    val_entries = random.sample(all_entries, num_in_validation)
+    random_entries = random.sample(all_entries, num_in_validation)
+    if itestset:
+        num_half_random = int(len(random_entries) * 0.5)
+        val_entries = random.sample(random_entries, num_half_random)
+        test_entries = [v for v in random_entries if v not in val_entries]
+        copy_imgs(test_entries, img_test, label_test)
+        print(f'copied {len(test_entries)} test_entries')
+    else:
+        val_entries = random_entries
     train_entries = [v for v in all_entries if v not in val_entries]
     copy_imgs(val_entries, img_val, label_val)
     copy_imgs(train_entries, img_train, label_train)

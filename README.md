@@ -39,11 +39,7 @@ conda install -y -c pytorch -c nvidia -c conda-forge \
 
 `pip install click fire tqdm`
 
-7. Upgrade your OpenCV headless version to meet SAHI 0.12.1 standards
-
-`pip install "opencv-python>=4.12.0.88" --no-deps`
-
-8. Problems with 2024 MKL backend???
+7. Problems with 2024 MKL backend???
 
 `conda install -y -c conda-forge "mkl<2024.1"`
 
@@ -56,15 +52,15 @@ We use symlinks to access images over a local private network using NFS.
 
 Can check if the entry still exists by viewing filesystem usage with `df -H`
 
-### Dataset Generation
+### Training Dataset Generation
 
-We annotate our panorama images with label-studio to make a training dataset. (see https://labelstud.io/ )
+We annotate our panorama images with cvat.ai and export those annotations as YOLO .txt files, one per image. These are structured in our Stitcher FastAPI database (https://github.com/EcdysisFoundation/stitcher).
 
-Export annotations from label-studio using json-min format.
-
-Run the dataset generation script
+Run the dataset generation script to convert those to coco, slice, and structure as a YOLO training dataset.
 
 `python -m dataset_generation`
+
+Label-studio is also compatible, export annotations from label-studio using json-min format and use option `--label-platform label-studio`
 
 ### Training
 

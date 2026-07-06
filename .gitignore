@@ -14,6 +14,7 @@ datasets/data.yaml
 last_training.log
 stitcher_dir
 dataset_pano
+eval_dataset_pano
 
 ##################
 # default stuff below

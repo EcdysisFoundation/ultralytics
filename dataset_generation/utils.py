@@ -63,7 +63,7 @@ def convert_annotation_to_yolo(labels):
     modified from:
     https://github.com/HumanSignal/label-studio-converter/blob/master/label_studio_converter/utils.py
 
-    Convert LS annotation to Yolo format.
+    Convert LS Bounding Box annotation to Yolo format.
 
     Args:
         label (dict): Dictionary containing annotation information including:
