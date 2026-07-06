@@ -122,13 +122,6 @@ def main(args):
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
     eval_dataset_dir = f'{curr_dir}/eval_dataset_pano'
 
-    # avoid DecompressionBombError
-    max_image_pixels = Image.MAX_IMAGE_PIXELS
-    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
-    if max_image_pixels < 180000000:
-        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
-        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
-
     base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
     if args.label_platform == PLATFORM_CVAT:
         eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
@@ -158,6 +151,8 @@ def main(args):
         use_segments=True)
     split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
 
+    # next, handle the eval_dirs files
+
 
 # run with `python -m dataset_generation -t`
 if __name__ == '__main__':
@@ -165,6 +160,13 @@ if __name__ == '__main__':
     Assumes running from ultralytics home dir with 'python -m dataset_generation'
     """
     args = get_args()
+
+    # avoid DecompressionBombError
+    max_image_pixels = Image.MAX_IMAGE_PIXELS
+    print(f'MAX_IMAGE_PIXES is {Image.MAX_IMAGE_PIXELS}')
+    if max_image_pixels < 180000000:
+        Image.MAX_IMAGE_PIXELS = max_image_pixels * 4
+        print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
     initial_count = count_initial_training_recs()
     if initial_count and not args.count_only:
