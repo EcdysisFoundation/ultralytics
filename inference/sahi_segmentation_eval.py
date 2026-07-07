@@ -7,14 +7,16 @@ from sahi.predict import get_sliced_prediction
 from .sahi_segmentation import DETECTION_MODEL
 
 
-def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=False):
+def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=10):
     """
     Intended as input for..
     sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
                    --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.json \
                    --type segm \
                    --classwise
+    save_img_file = n, save an image file every n images
     """
+    total_img_count = 0
     # Load the ground truth to get the correct Image IDs
     with open(dataset_json, 'r') as f:
         gt_data = json.load(f)
@@ -45,13 +47,16 @@ def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_fi
         coco_predictions = result.to_coco_predictions(image_id=image_id)
         all_coco_predictions.extend(coco_predictions)
 
+        total_img_count += 1
+
         if save_img_file:
-            filename = Path(file_name).stem
-            result.export_visuals(
-                export_dir="local_files/output/",
-                file_name=filename,
-                hide_labels=True,
-                hide_conf=True)
+            if (total_img_count % save_img_file) == 0:
+                filename = Path(file_name).stem
+                result.export_visuals(
+                    export_dir="local_files/output/",
+                    file_name=filename,
+                    hide_labels=True,
+                    hide_conf=True)
 
     #  data cleaning, mods
     #    Shift indexes by one because coco evaluation will ignore zero index.
