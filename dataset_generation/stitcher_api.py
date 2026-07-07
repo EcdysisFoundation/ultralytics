@@ -322,7 +322,7 @@ def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
         coco_json_source,
-        test_flag,
+        args,
         eval_dirs,
         anno_size_gte=50):
     """
@@ -350,8 +350,10 @@ def pano_segmentation_training_set_fromyolo(
     total_img_count = 0
     eval_img_count = 0
 
+    eval_percent = args.eval_prop * 100
+
     while True:
-        if test_flag:
+        if args.test_flag:
             # stop early for testing
             if img_index > 10:
                 break
@@ -392,18 +394,20 @@ def pano_segmentation_training_set_fromyolo(
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
 
-                    if (total_img_count % 10) == 0:
-                        print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
-                        label_name_base, _ = os.path.splitext(file_name)
-                        label_name = f"{label_name_base}.txt"
-                        eval_img_dst = eval_dirs['images_path'] / file_name
-                        eval_label_dst = eval_dirs['labels_path'] / label_name
-                        eval_img_dst.symlink_to(src)
-                        eval_label_dst.symlink_to(Path(label_path))
-                        total_img_count += 1
-                        eval_img_count += 1
+                    if (is_eval_trigger := (total_img_count % eval_percent) == 0) or args.evaluation_only:
+                        if is_eval_trigger:
+                            print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
+                            label_name_base, _ = os.path.splitext(file_name)
+                            label_name = f"{label_name_base}.txt"
+                            eval_img_dst = eval_dirs['images_path'] / file_name
+                            eval_label_dst = eval_dirs['labels_path'] / label_name
+                            eval_img_dst.symlink_to(src)
+                            eval_label_dst.symlink_to(Path(label_path))
+                            total_img_count += 1
+                            eval_img_count += 1
                         continue
 
+                    # add image to train and validation set
                     dst.symlink_to(src)
 
                     img_info = get_image_info(dst, img_index)

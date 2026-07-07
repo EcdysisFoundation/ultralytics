@@ -49,13 +49,18 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
+    parser.add_argument('-e', '--evaluation-only', action='store_true')
+    parser.add_argument('--eval-prop', type=float, default=0.1,
+                        help="proportion of images to be placed in evaluation set")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
         default=PLATFORM_CVAT)
-
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.eval_prop < 0.0 or args.eval_prop > 1:
+        raise ValueError(f'args.eval_prop cannot be < 0 or > 1, you entered {args.eval_prop}')
+    return args
 
 
 def single_specimen_trainingset(check_missing=True):
@@ -123,14 +128,20 @@ def main(args):
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
     eval_dataset_dir = f'{curr_dir}/eval_dataset_pano'
 
-    base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+    if args.evaluation_only:
+        print('args.evaluation_only is set to True, previous training data will not be cleared')
+    else:
+        print('clearing previous training data, starting with a clean slate....')
+        base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+
     if args.label_platform == PLATFORM_CVAT:
+        print(f'deleting anything in {eval_dataset_dir} to start new')
         eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
         pano_segmentation_training_set_fromyolo(
             dataset_dir,
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
-            args.test_flag,
+            args,
             eval_dirs)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(

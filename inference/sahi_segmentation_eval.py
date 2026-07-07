@@ -7,7 +7,7 @@ from sahi.predict import get_sliced_prediction
 from .sahi_segmentation import DETECTION_MODEL
 
 
-def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=10):
+def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=1):
     """
     Intended as input for..
     sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
