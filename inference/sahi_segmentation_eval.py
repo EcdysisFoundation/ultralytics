@@ -10,8 +10,8 @@ from .sahi_segmentation import DETECTION_MODEL
 def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=False):
     """
     Intended as input for..
-    sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/local_files/evaluation_dataset_2/dataset_test.json \
-                   --result_json_path /home/ecdysis/ultralytics/local_files/evaluation_dataset_2/evaluation_result.json \
+    sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
+                   --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.json \
                    --type segm \
                    --classwise
     """
@@ -69,8 +69,8 @@ def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_fi
 
 
 if __name__ == "__main__":
-    # insert paths, put result with dataset_json instead of somewhere else.
-    dataset_dir = '/home/ecdysis/ultralytics/local_files/evaluation_dataset_1/'
+    curr_dir = os.getcwd()
+    dataset_dir = f'{curr_dir}/eval_dataset_pano/'
     dataset_json = f'{dataset_dir}dataset_test.json'
     images_root = f'{dataset_dir}images/test'
     eval_output = f'{dataset_dir}evaluation_result.json'
