@@ -324,6 +324,7 @@ def pano_segmentation_training_set_fromyolo(
         coco_json_source,
         args,
         eval_dirs,
+        initial_count,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -346,7 +347,7 @@ def pano_segmentation_training_set_fromyolo(
     total_img_count = 0
     eval_img_count = 0
 
-    eval_percent = int(args.eval_prop * 100)
+    eval_interval = initial_count * (args.eval_percent / 100)
 
     while True:
         if args.test_flag:
@@ -387,7 +388,7 @@ def pano_segmentation_training_set_fromyolo(
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
 
-                    if (is_eval_trigger := (total_img_count % eval_percent) == 0) or args.evaluation_only:
+                    if (is_eval_trigger := (total_img_count % eval_interval) == 0) or args.evaluation_only:
                         if is_eval_trigger:
                             print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
                             label_name_base, _ = os.path.splitext(file_name)

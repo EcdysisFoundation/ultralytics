@@ -51,16 +51,16 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
     parser.add_argument('-e', '--evaluation-only', action='store_true')
-    parser.add_argument('--eval-prop', type=float, default=0.1,
-                        help="proportion of images to be placed in evaluation set")
+    parser.add_argument('--eval-percent', type=int, default=10,
+                        help="percent of images to be placed in evaluation set")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
         default=PLATFORM_CVAT)
     args = parser.parse_args()
-    if args.eval_prop < 0.0 or args.eval_prop > 1.0:
-        raise ValueError(f'args.eval_prop cannot be < 0 or > 1, you entered {args.eval_prop}')
+    if args.eval_prop < 0 or args.eval_prop > 100:
+        raise ValueError(f'args.eval_percent cannot be < 0 or > 100, you entered {args.eval_percent}')
     return args
 
 
@@ -121,7 +121,7 @@ def slice_pano_training_set(
     print('slice_pano_training_set done')
 
 
-def main(args):
+def main(args, initial_count):
 
     api_ping = get_root_message()
     print(api_ping)
@@ -153,6 +153,7 @@ def main(args):
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
             args,
+            initial_count,
             eval_dirs)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(
@@ -196,4 +197,4 @@ if __name__ == '__main__':
 
     initial_count = count_initial_training_recs()
     if initial_count and not args.count_only:
-        main(args)
+        main(args, initial_count)
