@@ -350,7 +350,7 @@ def pano_segmentation_training_set_fromyolo(
     total_img_count = 0
     eval_img_count = 0
 
-    eval_percent = args.eval_prop * 100
+    eval_percent = int(args.eval_prop * 100)
 
     while True:
         if args.test_flag:

@@ -58,7 +58,7 @@ def get_args() -> argparse.Namespace:
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
         default=PLATFORM_CVAT)
     args = parser.parse_args()
-    if args.eval_prop < 0.0 or args.eval_prop > 1:
+    if args.eval_prop < 0.0 or args.eval_prop > 1.0:
         raise ValueError(f'args.eval_prop cannot be < 0 or > 1, you entered {args.eval_prop}')
     return args
 
