@@ -122,7 +122,7 @@ def get_count_per_class_split(splits, class_name):
 
     for class_id, split in splits.items():
         # id, train, test, val
-        counts.append({class_name:class_id, **{split_name: len(image_paths) for split_name, image_paths in split.items()}})
+        counts.append({class_name: class_id, **{split_name: len(image_paths) for split_name, image_paths in split.items()}})
     return pd.DataFrame(counts)
 
 
@@ -451,7 +451,7 @@ def convert_yolo_to_coco(
         image_height,
         image_id,
         starting_anno_id=0,
-        anno_size_gte=0):
+        anno_size_gte=50):
     """
     Reads a YOLO segmentation .txt file
     and converts it to COCO format.
@@ -474,13 +474,17 @@ def convert_yolo_to_coco(
             ys = poly_pixels[1::2]
             x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
             width, height = x_max - x_min, y_max - y_min
+            x_min = int(x_min)
+            y_min = int(y_min)
+            width = int(width)
+            height = int(height)
 
-            # Filter out annotations smaller than the threshold or no rounded area
+            # Filter out annotations smaller than the threshold or tiny area
             if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
                 continue
 
             poly_area = round(calculate_polygon_area(xs, ys), 2)
-            if not poly_area:
+            if poly_area < 1.0:
                 continue
 
             coco_results.append({
@@ -489,7 +493,7 @@ def convert_yolo_to_coco(
                 "category_id": class_id,
                 "segmentation": [poly_pixels],
                 "area": poly_area,
-                "bbox": [round(x_min, 2), round(y_min, 2), round(width, 2), round(height, 2)],
+                "bbox": [x_min, y_min, width, height],
                 "iscrowd": 0,
                 "ignore": 0
             })
