@@ -324,7 +324,6 @@ def pano_segmentation_training_set_fromyolo(
         coco_json_source,
         args,
         eval_dirs,
-        initial_count,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -347,7 +346,7 @@ def pano_segmentation_training_set_fromyolo(
     total_img_count = 0
     eval_img_count = 0
 
-    eval_interval = int(initial_count * (args.eval_percent / 100))
+    eval_interval = int(100 / args.eval_percent)
 
     while True:
         if args.test_flag:
