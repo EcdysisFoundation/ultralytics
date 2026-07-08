@@ -322,8 +322,9 @@ def pano_segmentation_training_set_fromyolo(
         dataset_dir,
         dataset_json,
         coco_json_source,
-        test_flag,
+        args,
         eval_dirs,
+        initial_count,
         anno_size_gte=50):
     """
     Use the api and get yolo .txt files of training set.
@@ -331,10 +332,6 @@ def pano_segmentation_training_set_fromyolo(
     at least a width and height of the bounding box in
     # of anno_size_gte pixels.
     """
-    api_ping = get_root_message()
-    print(api_ping)
-    if ERROR_MSG_KEY in api_ping.keys():
-        return
     api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
     offset = 0
     limit = 10
@@ -350,8 +347,10 @@ def pano_segmentation_training_set_fromyolo(
     total_img_count = 0
     eval_img_count = 0
 
+    eval_interval = int(initial_count * (args.eval_percent / 100))
+
     while True:
-        if test_flag:
+        if args.test_flag:
             # stop early for testing
             if img_index > 10:
                 break
@@ -360,8 +359,6 @@ def pano_segmentation_training_set_fromyolo(
             'limit': limit,
             'approved': True
         }
-        print('-list-upload-files--abridged' * 6)
-        print(params)
 
         try:
             response = requests.get(api_list_url, params=params)
@@ -374,7 +371,6 @@ def pano_segmentation_training_set_fromyolo(
             if not data:
                 break
 
-            print(f'data returned from api for next {limit} records')
             for row in data:
                 filtering_reason = get_filtering_reason(row)
                 if filtering_reason:
@@ -392,18 +388,20 @@ def pano_segmentation_training_set_fromyolo(
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
 
-                    if (total_img_count % 10) == 0:
-                        print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
-                        label_name_base, _ = os.path.splitext(file_name)
-                        label_name = f"{label_name_base}.txt"
-                        eval_img_dst = eval_dirs['images_path'] / file_name
-                        eval_label_dst = eval_dirs['labels_path'] / label_name
-                        eval_img_dst.symlink_to(src)
-                        eval_label_dst.symlink_to(Path(label_path))
+                    if (is_eval_trigger := (total_img_count % eval_interval) == 0) or args.evaluation_only:
+                        if is_eval_trigger:
+                            print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
+                            label_name_base, _ = os.path.splitext(file_name)
+                            label_name = f"{label_name_base}.txt"
+                            eval_img_dst = eval_dirs['images_path'] / file_name
+                            eval_label_dst = eval_dirs['labels_path'] / label_name
+                            eval_img_dst.symlink_to(src)
+                            eval_label_dst.symlink_to(Path(label_path))
+                            eval_img_count += 1
                         total_img_count += 1
-                        eval_img_count += 1
                         continue
 
+                    # add image to train and validation set
                     dst.symlink_to(src)
 
                     img_info = get_image_info(dst, img_index)

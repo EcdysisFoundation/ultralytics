@@ -17,7 +17,8 @@ from .split import (
     split_by_labels_train_val, DATASETS_FOLDER
 )
 from .stitcher_api import (
-    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs
+    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs,
+    get_root_message, ERROR_MSG_KEY
 )
 from .eval_test_dataset import eval_test_dataset
 from .data import ObjectDetectData
@@ -49,13 +50,18 @@ def get_args() -> argparse.Namespace:
         help='The column to catagorize the images')
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
+    parser.add_argument('-e', '--evaluation-only', action='store_true')
+    parser.add_argument('--eval-percent', type=int, default=10,
+                        help="percent of images to be placed in evaluation set")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
         choices=[PLATFORM_CVAT, PLATFORM_LABEL_STUDIO],
         default=PLATFORM_CVAT)
-
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.eval_percent < 0 or args.eval_percent > 100:
+        raise ValueError(f'args.eval_percent cannot be < 0 or > 100, you entered {args.eval_percent}')
+    return args
 
 
 def single_specimen_trainingset(check_missing=True):
@@ -93,8 +99,11 @@ def slice_pano_training_set(
     print(f'dataset_file_path: {dataset_json_dir}')
 
     coco_dict = load_json(dataset_json_dir)
-    print('coco_dict read, first image is')
-    print(coco_dict["images"][0]["file_name"])
+    len_images = len(coco_dict['images'])
+    if not len_images:
+        print('There are no images in the training dataset.')
+    print(f'There are {len_images} images in the dataset')
+    print(f"coco_dict read, first image is {coco_dict['images'][0]['file_name']}")
 
     slice_coco(
         coco_annotation_file_path=dataset_json_dir,
@@ -112,7 +121,14 @@ def slice_pano_training_set(
     print('slice_pano_training_set done')
 
 
-def main(args):
+def main(args, initial_count):
+
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
+        print(api_ping)
+        print('Stitcher-FastAPI is not reachable, exting...')
+        return
 
     curr_dir = os.getcwd()
     coco_conv_dir = f'{DATASET_PANO}/coco_converted'
@@ -123,15 +139,22 @@ def main(args):
     sliced_coco_json_dir = f'{coco_conv_dir}/labels/sliced_coco.json_coco'  # this is a directory
     eval_dataset_dir = f'{curr_dir}/eval_dataset_pano'
 
-    base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+    if args.evaluation_only:
+        print('args.evaluation_only is set to True, previous training data will not be cleared')
+    else:
+        print('clearing previous training data, starting with a clean slate....')
+        base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+
     if args.label_platform == PLATFORM_CVAT:
+        print(f'deleting anything in {eval_dataset_dir} to start new')
         eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
         pano_segmentation_training_set_fromyolo(
             dataset_dir,
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
-            args.test_flag,
-            eval_dirs)
+            args,
+            eval_dirs,
+            initial_count)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(
             dataset_dir,
@@ -141,16 +164,19 @@ def main(args):
         )
     else:
         print(f'--label-platform {args.label_platform} not supported')
-    slice_pano_training_set(
-        dataset_dir,
-        dataset_json_dir,
-        dataset_sliced_dir)
-    convert_coco(
-        slice_dir,
-        cls91to80=False,
-        save_dir=coco_conv_dir,
-        use_segments=True)
-    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
+
+    if not args.evaluation_only:
+
+        slice_pano_training_set(
+            dataset_dir,
+            dataset_json_dir,
+            dataset_sliced_dir)
+        convert_coco(
+            slice_dir,
+            cls91to80=False,
+            save_dir=coco_conv_dir,
+            use_segments=True)
+        split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
 
     eval_test_dataset(eval_dirs)
 
@@ -171,4 +197,4 @@ if __name__ == '__main__':
 
     initial_count = count_initial_training_recs()
     if initial_count and not args.count_only:
-        main(args)
+        main(args, initial_count)
