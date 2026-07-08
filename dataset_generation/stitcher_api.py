@@ -374,7 +374,6 @@ def pano_segmentation_training_set_fromyolo(
             if not data:
                 break
 
-            print(f'data returned from api for next {limit} records')
             for row in data:
                 filtering_reason = get_filtering_reason(row)
                 if filtering_reason:
