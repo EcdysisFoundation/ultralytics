@@ -17,7 +17,8 @@ from .split import (
     split_by_labels_train_val, DATASETS_FOLDER
 )
 from .stitcher_api import (
-    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs
+    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs,
+    get_root_message, ERROR_MSG_KEY
 )
 from .eval_test_dataset import eval_test_dataset
 from .data import ObjectDetectData
@@ -121,6 +122,13 @@ def slice_pano_training_set(
 
 
 def main(args):
+
+    api_ping = get_root_message()
+    print(api_ping)
+    if ERROR_MSG_KEY in api_ping.keys():
+        print(api_ping)
+        print('Stitcher-FastAPI is not reachable, exting...')
+        return
 
     curr_dir = os.getcwd()
     coco_conv_dir = f'{DATASET_PANO}/coco_converted'

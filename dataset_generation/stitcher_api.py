@@ -331,10 +331,6 @@ def pano_segmentation_training_set_fromyolo(
     at least a width and height of the bounding box in
     # of anno_size_gte pixels.
     """
-    api_ping = get_root_message()
-    print(api_ping)
-    if ERROR_MSG_KEY in api_ping.keys():
-        return
     api_list_url = STITCHER_URL + '/list-upload-files-abridged/'
     offset = 0
     limit = 10
