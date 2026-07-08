@@ -475,18 +475,20 @@ def convert_yolo_to_coco(
             x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
             width, height = x_max - x_min, y_max - y_min
 
-            # Filter out annotations smaller than the threshold
+            # Filter out annotations smaller than the threshold or no rounded area
             if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
                 continue
 
-            poly_area = calculate_polygon_area(xs, ys)
+            poly_area = round(calculate_polygon_area(xs, ys), 2)
+            if not poly_area:
+                continue
 
             coco_results.append({
                 "id": anno_id,
                 "image_id": image_id,
                 "category_id": class_id,
                 "segmentation": [poly_pixels],
-                "area": round(poly_area, 2),
+                "area": poly_area,
                 "bbox": [round(x_min, 2), round(y_min, 2), round(width, 2), round(height, 2)],
                 "iscrowd": 0,
                 "ignore": 0
