@@ -362,8 +362,6 @@ def pano_segmentation_training_set_fromyolo(
             'limit': limit,
             'approved': True
         }
-        print('-list-upload-files--abridged' * 6)
-        print(params)
 
         try:
             response = requests.get(api_list_url, params=params)

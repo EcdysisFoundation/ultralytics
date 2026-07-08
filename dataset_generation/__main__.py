@@ -98,8 +98,11 @@ def slice_pano_training_set(
     print(f'dataset_file_path: {dataset_json_dir}')
 
     coco_dict = load_json(dataset_json_dir)
-    print('coco_dict read, first image is')
-    print(coco_dict["images"][0]["file_name"])
+    len_images = len(coco_dict['images'])
+    if not len_images:
+        print('There are no images in the training dataset.')
+    print(f'There are {len_images} images in the dataset')
+    print(f"coco_dict read, first image is {coco_dict['images'][0]['file_name']}")
 
     slice_coco(
         coco_annotation_file_path=dataset_json_dir,
@@ -152,16 +155,19 @@ def main(args):
         )
     else:
         print(f'--label-platform {args.label_platform} not supported')
-    slice_pano_training_set(
-        dataset_dir,
-        dataset_json_dir,
-        dataset_sliced_dir)
-    convert_coco(
-        slice_dir,
-        cls91to80=False,
-        save_dir=coco_conv_dir,
-        use_segments=True)
-    split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
+
+    if not args.evaluation_only:
+
+        slice_pano_training_set(
+            dataset_dir,
+            dataset_json_dir,
+            dataset_sliced_dir)
+        convert_coco(
+            slice_dir,
+            cls91to80=False,
+            save_dir=coco_conv_dir,
+            use_segments=True)
+        split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
 
     eval_test_dataset(eval_dirs)
 
