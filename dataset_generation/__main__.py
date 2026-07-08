@@ -121,7 +121,7 @@ def slice_pano_training_set(
     print('slice_pano_training_set done')
 
 
-def main(args, initial_count):
+def main(args):
 
     api_ping = get_root_message()
     print(api_ping)
@@ -153,8 +153,7 @@ def main(args, initial_count):
             DATASET_JSON,
             copy.deepcopy(COCO_JSON_SOURCE),
             args,
-            eval_dirs,
-            initial_count)
+            eval_dirs)
     elif args.label_platform == PLATFORM_LABEL_STUDIO:
         pano_segmentation_training_set(
             dataset_dir,
@@ -197,4 +196,4 @@ if __name__ == '__main__':
 
     initial_count = count_initial_training_recs()
     if initial_count and not args.count_only:
-        main(args, initial_count)
+        main(args)
