@@ -8,6 +8,7 @@ from PIL import Image
 
 from pathlib import Path
 from uuid import uuid4
+from sahi.utils.coco import CocoAnnotation
 
 from inference.sahi_stitched import label_studio_to_coco
 
@@ -485,6 +486,12 @@ def convert_yolo_to_coco(
 
             poly_area = round(calculate_polygon_area(xs, ys), 2)
             if poly_area < 1.0:
+                continue
+
+            # additional check, calculate area exactly as SAHI to filter additional unusuals.
+            sahi_annot = CocoAnnotation.from_coco_annotation_dict([poly_pixels])
+            if sahi_annot.area < 1.0:
+                print(f"WARNING: image_id {image_id} annotation id {anno_id} had an area of {sahi_annot.area}")
                 continue
 
             coco_results.append({
