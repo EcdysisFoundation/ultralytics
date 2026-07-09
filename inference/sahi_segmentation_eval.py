@@ -1,10 +1,23 @@
 import json
 import os
+import numpy as np
 from pathlib import Path
 
 from sahi.predict import get_sliced_prediction
 
 from .sahi_segmentation import DETECTION_MODEL
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """Custom encoder to handle numpy data types during JSON serialization."""
+    def default(self, obj):
+        if isinstance(obj, (np.float32, np.float64)):
+            return float(obj)
+        if isinstance(obj, (np.int32, np.int64)):
+            return int(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 
 def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=1):
@@ -64,7 +77,7 @@ def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_fi
                     is_first_item = False
 
                 # 4. Dump single prediction object straight to file
-                json.dump(pred, out_file)
+                json.dump(pred, out_file, cls=NumpyEncoder)
 
             total_img_count += 1
 
