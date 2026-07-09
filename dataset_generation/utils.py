@@ -488,13 +488,7 @@ def convert_yolo_to_coco(
             if poly_area < 1.0:
                 continue
 
-            # additional check, calculate area exactly as SAHI to filter additional unusuals.
-            sahi_annot = CocoAnnotation.from_coco_annotation_dict([poly_pixels])
-            if sahi_annot.area < 1.0:
-                print(f"WARNING: image_id {image_id} annotation id {anno_id} had an area of {sahi_annot.area}")
-                continue
-
-            coco_results.append({
+            coco_rec = {
                 "id": anno_id,
                 "image_id": image_id,
                 "category_id": class_id,
@@ -503,7 +497,15 @@ def convert_yolo_to_coco(
                 "bbox": [x_min, y_min, width, height],
                 "iscrowd": 0,
                 "ignore": 0
-            })
+            }
+
+            # additional check, calculate area exactly as SAHI to filter additional unusuals.
+            sahi_annot = CocoAnnotation.from_coco_annotation_dict(coco_rec)
+            if sahi_annot.area < 1.0:
+                print(f"WARNING: image_id {image_id} annotation id {anno_id} had an area of {sahi_annot.area}")
+                continue
+
+            coco_results.append(coco_rec)
             anno_id += 1
 
     return coco_results
