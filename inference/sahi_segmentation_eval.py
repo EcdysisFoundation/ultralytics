@@ -11,6 +11,7 @@ from .sahi_segmentation import DETECTION_MODEL
 
 
 FILE_LOCK = threading.Lock()
+TEMP_RESULTS_PREFIX = 'temp_results_'
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -25,7 +26,8 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def predict_and_stream(img_entry, eval_output, total_img_count, save_img_file):
+def predict_and_stream(images_root, output_dir, save_img_file, img_entry, total_img_count):
+
     image_id = img_entry['id']
     file_name = img_entry['file_name']
     img_path = os.path.join(images_root, file_name)
@@ -63,39 +65,45 @@ def predict_and_stream(img_entry, eval_output, total_img_count, save_img_file):
             if (total_img_count % save_img_file) == 0:
                 filename = Path(file_name).stem
                 result.export_visuals(
-                    export_dir="local_files/output/",
+                    export_dir=output_dir,
                     file_name=filename,
                     hide_labels=True,
                     hide_conf=True)
 
-        with FILE_LOCK:
-            # Open in append mode ('a')
-            with open(eval_output, "a") as f:
-                f.write(json.dumps(cleaned_coco) + "\n")
+        thread_id = threading.get_ident()
+        temp_filename = f"{output_dir}{TEMP_RESULTS_PREFIX}{thread_id}.jsonl"
+        with open(temp_filename, "a") as f:
+            f.write(json.dumps(cleaned_coco) + "\n")
 
 
-def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=1):
+def run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file):
     """
     Intended as input for..
     sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
-                   --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.json \
+                   --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.jsonl \
                    --type segm \
                    --classwise
-    save_img_file = n, save an image file every n images
     """
     total_img_count = 0
     # Load the ground truth to get the correct Image IDs
     with open(dataset_json, 'r') as f:
         gt_data = json.load(f)
 
-    # Initialize output file/clear old results
-    open(eval_output, "w").close()
-
     with ThreadPoolExecutor(max_workers=8) as executor:
         for img_entry in gt_data['images']:
             total_img_count += 1
-            executor.submit(predict_and_stream, img_entry, eval_output, total_img_count, save_img_file)
-    return
+            executor.submit(
+                predict_and_stream,
+                images_root, output_dir, save_img_file, img_entry, total_img_count)
+
+    # Combine all temp files into one master file at the end
+    print("Stitching files together...")
+    with open(eval_output_file, "w") as master_file:
+        for fname in os.listdir("."):
+            if fname.startswith(TEMP_RESULTS_PREFIX) and fname.endswith(".jsonl"):
+                with open(fname, "r") as temp_f:
+                    master_file.write(temp_f.read())
+                os.remove(fname)  # Clean up temp file
 
 
 if __name__ == "__main__":
@@ -103,6 +111,8 @@ if __name__ == "__main__":
     dataset_dir = f'{curr_dir}/eval_dataset_pano/'
     dataset_json = f'{dataset_dir}dataset_test.json'
     images_root = f'{dataset_dir}images/test'
-    eval_output = f'{dataset_dir}evaluation_result.jsonl'
-    run_evaluation_inference(dataset_json, images_root, eval_output)
-    print(f"Evaluation results saved to {eval_output}")
+    eval_output_file = f'{dataset_dir}evaluation_result.jsonl'
+    output_dir = "local_files/output/"
+    save_img_file = 1  # save an image file every n images
+    run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file)
+    print(f"Evaluation results saved to {eval_output_file}")
