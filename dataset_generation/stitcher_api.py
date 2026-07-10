@@ -271,6 +271,9 @@ def get_filtering_reason(row):
         filtering_reason = 'not_completed'
     elif row['omit_from_training']:
         filtering_reason = 'omit_from_training'
+    # temp omit label_studio_conversions
+    elif row['label_project_dir'] == 'label_studio_conversions':
+        filtering_reason = 'label_studio_conversions'
     return filtering_reason
 
 

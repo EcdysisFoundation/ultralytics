@@ -8,6 +8,7 @@ from PIL import Image
 
 from pathlib import Path
 from uuid import uuid4
+from sahi.utils.coco import CocoAnnotation
 
 from inference.sahi_stitched import label_studio_to_coco
 
@@ -122,7 +123,7 @@ def get_count_per_class_split(splits, class_name):
 
     for class_id, split in splits.items():
         # id, train, test, val
-        counts.append({class_name:class_id, **{split_name: len(image_paths) for split_name, image_paths in split.items()}})
+        counts.append({class_name: class_id, **{split_name: len(image_paths) for split_name, image_paths in split.items()}})
     return pd.DataFrame(counts)
 
 
@@ -451,7 +452,7 @@ def convert_yolo_to_coco(
         image_height,
         image_id,
         starting_anno_id=0,
-        anno_size_gte=0):
+        anno_size_gte=50):
     """
     Reads a YOLO segmentation .txt file
     and converts it to COCO format.
@@ -474,23 +475,37 @@ def convert_yolo_to_coco(
             ys = poly_pixels[1::2]
             x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
             width, height = x_max - x_min, y_max - y_min
+            x_min = int(x_min)
+            y_min = int(y_min)
+            width = int(width)
+            height = int(height)
 
-            # Filter out annotations smaller than the threshold
+            # Filter out annotations smaller than the threshold or tiny area
             if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
                 continue
 
-            poly_area = calculate_polygon_area(xs, ys)
+            poly_area = round(calculate_polygon_area(xs, ys), 2)
+            if poly_area < 1.0:
+                continue
 
-            coco_results.append({
+            coco_rec = {
                 "id": anno_id,
                 "image_id": image_id,
                 "category_id": class_id,
                 "segmentation": [poly_pixels],
-                "area": round(poly_area, 2),
-                "bbox": [round(x_min, 2), round(y_min, 2), round(width, 2), round(height, 2)],
+                "area": poly_area,
+                "bbox": [x_min, y_min, width, height],
                 "iscrowd": 0,
                 "ignore": 0
-            })
+            }
+
+            # additional check, calculate area exactly as SAHI to filter additional unusuals.
+            sahi_annot = CocoAnnotation.from_coco_annotation_dict(coco_rec)
+            if sahi_annot.area < 1.0:
+                print(f"WARNING: image_id {image_id} annotation id {anno_id} had an area of {sahi_annot.area}")
+                continue
+
+            coco_results.append(coco_rec)
             anno_id += 1
 
     return coco_results
