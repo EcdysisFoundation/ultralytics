@@ -77,13 +77,6 @@ def predict_and_stream(images_root, output_dir, save_img_file, img_entry, total_
 
 
 def run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file):
-    """
-    Intended as input for..
-    sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
-                   --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.jsonl \
-                   --type segm \
-                   --classwise
-    """
     total_img_count = 0
     # Load the ground truth to get the correct Image IDs
     with open(dataset_json, 'r') as f:
@@ -107,13 +100,52 @@ def run_evaluation_inference(dataset_json, images_root, eval_output_file, output
                 os.remove(full_temp_path)  # Clean up temp file
 
 
+def convert_jsonl_to_coco_json(jsonl_input_path, json_output_path):
+    combined_predictions = []
+
+    print(f"Reading streaming results from {jsonl_input_path}...")
+
+    with open(jsonl_input_path, "r") as f:
+        for line_num, line in enumerate(f, 1):
+            cleaned_line = line.strip()
+            if not cleaned_line:
+                continue  # Skip any accidental blank lines
+
+            try:
+                # Parse the line (which is a list of dicts for a single image)
+                image_predictions = json.loads(cleaned_line)
+
+                # Flatten the list into our master collection
+                combined_predictions.extend(image_predictions)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ Warning: Skipping malformed JSON on line {line_num}: {e}")
+
+    print(f"Extracted {len(combined_predictions)} total bounding box/segmentation predictions.")
+    print(f"Writing unified COCO JSON to {json_output_path}...")
+
+    # Write out as a single standard JSON file
+    with open(json_output_path, "w") as f:
+        json.dump(combined_predictions, f)
+
+    print("🎉 Conversion complete!")
+
+
 if __name__ == "__main__":
+    """
+    eval_output_json intended as input for..
+    sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
+                   --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.json \
+                   --type segm \
+                   --classwise
+    """
     curr_dir = os.getcwd()
     dataset_dir = f'{curr_dir}/eval_dataset_pano/'
     dataset_json = f'{dataset_dir}dataset_test.json'
     images_root = f'{dataset_dir}images/test'
     eval_output_file = f'{dataset_dir}evaluation_result.jsonl'
+    eval_output_json = f"{dataset_dir}/evaluation_result.json"
     output_dir = "local_files/output/"
     save_img_file = 1  # save an image file every n images
     run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file)
-    print(f"Evaluation results saved to {eval_output_file}")
+    convert_jsonl_to_coco_json(eval_output_file, eval_output_json)
+    print(f"Evaluation results saved to {eval_output_json}")
