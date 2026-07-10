@@ -73,7 +73,7 @@ def predict_and_stream(images_root, output_dir, save_img_file, img_entry, total_
         thread_id = threading.get_ident()
         temp_filename = f"{output_dir}{TEMP_RESULTS_PREFIX}{thread_id}.jsonl"
         with open(temp_filename, "a") as f:
-            f.write(json.dumps(cleaned_coco) + "\n")
+            f.write(json.dumps(cleaned_coco, cls=NumpyEncoder) + "\n")
 
 
 def run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file):
@@ -99,11 +99,12 @@ def run_evaluation_inference(dataset_json, images_root, eval_output_file, output
     # Combine all temp files into one master file at the end
     print("Stitching files together...")
     with open(eval_output_file, "w") as master_file:
-        for fname in os.listdir("."):
+        for fname in os.listdir(output_dir):
             if fname.startswith(TEMP_RESULTS_PREFIX) and fname.endswith(".jsonl"):
-                with open(fname, "r") as temp_f:
+                full_temp_path = os.path.join(output_dir, fname)
+                with open(full_temp_path, "r") as temp_f:
                     master_file.write(temp_f.read())
-                os.remove(fname)  # Clean up temp file
+                os.remove(full_temp_path)  # Clean up temp file
 
 
 if __name__ == "__main__":
