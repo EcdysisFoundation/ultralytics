@@ -2,10 +2,15 @@ import json
 import os
 import numpy as np
 from pathlib import Path
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from sahi.predict import get_sliced_prediction
 
 from .sahi_segmentation import DETECTION_MODEL
+
+
+FILE_LOCK = threading.Lock()
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -18,6 +23,55 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super().default(obj)
+
+
+def predict_and_stream(img_entry, eval_output, total_img_count, save_img_file):
+    image_id = img_entry['id']
+    file_name = img_entry['file_name']
+    img_path = os.path.join(images_root, file_name)
+
+    # Run Sliced Prediction
+    result = get_sliced_prediction(
+        img_path,
+        DETECTION_MODEL,
+        batch_size=10,
+        slice_height=2000,
+        slice_width=2000,
+        overlap_height_ratio=0.4,
+        overlap_width_ratio=0.4,
+        postprocess_match_threshold=0.3,
+        perform_standard_pred=True,
+    )
+
+    # Convert to COCO format using the INTEGER ID from the GT
+    coco_predictions = result.to_coco_predictions(image_id=image_id)
+
+    # --- clean data ---
+    cleaned_coco = []
+    for pred in coco_predictions:
+        # Skip predictions with no bounding box
+        if not pred.get('bbox'):
+            continue
+
+        # Shift indexes by one (coco evaluation ignores zero index)
+        pred['category_id'] = int(pred['category_id']) + 1
+        cleaned_coco.append(pred)
+
+    # skip if no annotations
+    if cleaned_coco:
+        if save_img_file:
+            if (total_img_count % save_img_file) == 0:
+                filename = Path(file_name).stem
+                result.export_visuals(
+                    export_dir="local_files/output/",
+                    file_name=filename,
+                    hide_labels=True,
+                    hide_conf=True)
+
+        with FILE_LOCK:
+            # Open in append mode ('a')
+            with open(eval_output, "a") as f:
+                f.write(json.dumps(cleaned_coco) + "\n")
 
 
 def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_file=1):
@@ -34,65 +88,14 @@ def run_evaluation_inference(dataset_json, images_root, eval_output, save_img_fi
     with open(dataset_json, 'r') as f:
         gt_data = json.load(f)
 
-    with open(eval_output, 'w') as out_file:
-        out_file.write('[\n')
-        is_first_item = True
+    # Initialize output file/clear old results
+    open(eval_output, "w").close()
 
-        # Loop through images defined in the Ground Truth
+    with ThreadPoolExecutor(max_workers=8) as executor:
         for img_entry in gt_data['images']:
-            image_id = img_entry['id']
-            file_name = img_entry['file_name']
-            img_path = os.path.join(images_root, file_name)
-
-            # Run Sliced Prediction
-            # batch_size=16 tells the GPU to process 16 slices at once
-            result = get_sliced_prediction(
-                img_path,
-                DETECTION_MODEL,
-                batch_size=10,
-                slice_height=2000,
-                slice_width=2000,
-                overlap_height_ratio=0.4,
-                overlap_width_ratio=0.4,
-                postprocess_match_threshold=0.3,
-                perform_standard_pred=True,
-            )
-
-            # Convert to COCO format using the INTEGER ID from the GT
-            coco_predictions = result.to_coco_predictions(image_id=image_id)
-
-            # --- Stream & clean data ---
-            for pred in coco_predictions:
-                # 1. Skip predictions with no bounding box
-                if not pred.get('bbox'):
-                    continue
-
-                # 2. Shift indexes by one (coco evaluation ignores zero index)
-                pred['category_id'] = int(pred['category_id']) + 1
-
-                # 3. Handle syntax commas for the JSON list
-                if not is_first_item:
-                    out_file.write(',\n')
-                else:
-                    is_first_item = False
-
-                # 4. Dump single prediction object straight to file
-                json.dump(pred, out_file, cls=NumpyEncoder)
-
             total_img_count += 1
-
-            if save_img_file:
-                if (total_img_count % save_img_file) == 0:
-                    filename = Path(file_name).stem
-                    result.export_visuals(
-                        export_dir="local_files/output/",
-                        file_name=filename,
-                        hide_labels=True,
-                        hide_conf=True)
-
-        out_file.write('\n]')
-
-    print(f"Evaluation results saved to {eval_output}")
+            executor.submit(predict_and_stream, img_entry, eval_output, total_img_count, save_img_file)
+    return
 
 
 if __name__ == "__main__":
@@ -100,5 +103,6 @@ if __name__ == "__main__":
     dataset_dir = f'{curr_dir}/eval_dataset_pano/'
     dataset_json = f'{dataset_dir}dataset_test.json'
     images_root = f'{dataset_dir}images/test'
-    eval_output = f'{dataset_dir}evaluation_result.json'
+    eval_output = f'{dataset_dir}evaluation_result.jsonl'
     run_evaluation_inference(dataset_json, images_root, eval_output)
+    print(f"Evaluation results saved to {eval_output}")
