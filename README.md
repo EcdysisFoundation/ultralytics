@@ -8,7 +8,7 @@ https://docs.ultralytics.com/guides/conda-quickstart/
 
 1. Create a fresh environment while forcing NumPy 1.x compatibility from the start
 
-`conda create --name ultralytics_n1 python=3.11 "numpy<2" -y`
+`conda create --name ultralytics_n1 python=3.11 -y`
 
 2. Activate the new environment
 
@@ -17,19 +17,40 @@ https://docs.ultralytics.com/guides/conda-quickstart/
 3. Install core CUDA, PyTorch, and heavy framework binaries via Conda
 
 ```
-conda install -y -c pytorch -c nvidia -c conda-forge \
-    pytorch \
-    torchvision \
-    pytorch-cuda=12.4 \
+conda install -y -c pytorch -c conda-forge \
+    pytorch::pytorch \
+    pytorch::torchvision \
+    pytorch::pytorch-cuda=12.4 \
     ultralytics \
     scikit-learn \
     scikit-image \
     pycocotools
 ```
 
-4. Safely upgrade or install SAHI using pip without altering the core NumPy version
+check that cuda was installed, in python
 
-`pip install --upgrade sahi --no-deps`
+```
+import torch
+print("CUDA Available:", torch.cuda.is_available())
+print("GPU Device Name:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None")
+print("GPU Device Name:", torch.cuda.get_device_name(1) if torch.cuda.is_available() else "None")
+print("PyTorch CUDA Version:", torch.version.cuda)
+```
+
+Problems with 2024 MKL backend???
+
+`conda install -y -c conda-forge "mkl<2024.1"`
+
+Check opencv version, `cv2.__version__` SAHI requires opencv-python>=4.12.0, if lower try..
+
+`conda install -c conda-forge opencv=4.12.0`
+
+This will not get the .0.88 release on pip, so the warning may still appear, but should still avoid breaking changes from <4.12.
+
+
+4. Install SAHI using pip without altering previous installations
+
+`pip install sahi --no-deps`
 
 5. Avoid system binary conflicts for this install
 
@@ -39,9 +60,11 @@ conda install -y -c pytorch -c nvidia -c conda-forge \
 
 `pip install click fire tqdm`
 
-7. Problems with 2024 MKL backend???
-
-`conda install -y -c conda-forge "mkl<2024.1"`
+This workflow results in compatibility error
+```
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+sahi 0.12.1 requires opencv-python>=4.12.0.88, but you have opencv-python 4.10.0 which is incompatible.
+```
 
 [!TIP]
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. Integrations like SAHI may require many specific configurations as seen above. To avoid problems with Ultralytics, try to only use the libraries it includes and the minimum needed to run SAHI.
@@ -66,7 +89,7 @@ Label-studio is also compatible, export annotations from label-studio using json
 
 Run with output saved to file
 
-`python -m train > last_training.log 2>&1 &`
+`nohup python -m train > last_training.log 2>&1 &`
 
 To run on both GPU's, there will be an error due to Intel library incompatibility, but you can use the force variable
 
