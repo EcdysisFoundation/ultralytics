@@ -8,7 +8,7 @@ https://docs.ultralytics.com/guides/conda-quickstart/
 
 1. Create a fresh environment while forcing NumPy 1.x compatibility from the start
 
-`conda create --name ultralytics_n1 python=3.11 "numpy<2" -y`
+`conda create --name ultralytics_n1 python=3.11 -y`
 
 2. Activate the new environment
 
@@ -41,8 +41,14 @@ Problems with 2024 MKL backend???
 
 `conda install -y -c conda-forge "mkl<2024.1"`
 
+Check opencv version, `cv2.__version__` SAHI requires opencv-python>=4.12.0, if lower try..
 
-4. Install SAHI using pip without altering the core NumPy version
+`conda install -c conda-forge opencv=4.12.0`
+
+This will not get the .0.88 release on pip, so the warning may still appear, but should still avoid breaking changes from <4.12.
+
+
+4. Install SAHI using pip without altering previous installations
 
 `pip install sahi --no-deps`
 
@@ -83,7 +89,7 @@ Label-studio is also compatible, export annotations from label-studio using json
 
 Run with output saved to file
 
-`python -m train > last_training.log 2>&1 &`
+`nohup python -m train > last_training.log 2>&1 &`
 
 To run on both GPU's, there will be an error due to Intel library incompatibility, but you can use the force variable
 
