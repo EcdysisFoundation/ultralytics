@@ -51,8 +51,13 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('-t', '--test-flag', action='store_true')
     parser.add_argument('-c', '--count-only', action='store_true')
     parser.add_argument('-e', '--evaluation-only', action='store_true')
+    parser.add_argument('-local', '--local-train-dataset', action='store_true',
+                        help=("when set to true, this uses files already in DATASET_PANO and "
+                              "does not call api to get new ones. Evaluation dataset does not change"))
     parser.add_argument('--eval-percent', type=int, default=10,
                         help="percent of images to be placed in evaluation set")
+    parser.add_argument('--slice-size', type=int, default=3000,
+                        help="image slicing dimensions for SAHI")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
@@ -61,6 +66,8 @@ def get_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.eval_percent < 0 or args.eval_percent > 100:
         raise ValueError(f'args.eval_percent cannot be < 0 or > 100, you entered {args.eval_percent}')
+    if args.evaluation_only and args.local_train_dataset:
+        raise ValueError('args.evaluation_only and args.local_train_dataset at the same time is not valid.')
     return args
 
 
@@ -92,6 +99,7 @@ def single_specimen_trainingset(check_missing=True):
 
 
 def slice_pano_training_set(
+        args,
         dataset_dir,
         dataset_json_dir,
         dataset_sliced_dir):
@@ -111,8 +119,8 @@ def slice_pano_training_set(
         output_coco_annotation_file_name="sliced_coco.json",
         ignore_negative_samples=False,
         output_dir=dataset_sliced_dir,
-        slice_height=2000,
-        slice_width=2000,
+        slice_height=args.slice_size,
+        slice_width=args.slice_size,
         overlap_height_ratio=0.2,
         overlap_width_ratio=0.2,
         min_area_ratio=0.1,
@@ -142,31 +150,42 @@ def main(args):
     if args.evaluation_only:
         print('args.evaluation_only is set to True, previous training data will not be cleared')
     else:
-        print('clearing previous training data, starting with a clean slate....')
-        base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+        print('clearing previous training data....')
+        if args.local_train_dataset:
+            # clear training dataset directories, not DATASET_PANO
+            base_dirs = create_clear_dirs()
+        else:
+            # clear DATASET_PANO to download new ones.
+            print(f'clearing previous {DATASET_PANO} directory, will download new panos')
+            base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
 
-    if args.label_platform == PLATFORM_CVAT:
-        print(f'deleting anything in {eval_dataset_dir} to start new')
-        eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
-        pano_segmentation_training_set_fromyolo(
-            dataset_dir,
-            DATASET_JSON,
-            copy.deepcopy(COCO_JSON_SOURCE),
-            args,
-            eval_dirs)
-    elif args.label_platform == PLATFORM_LABEL_STUDIO:
-        pano_segmentation_training_set(
-            dataset_dir,
-            DATASET_JSON,
-            copy.deepcopy(COCO_JSON_SOURCE),
-            args.test_flag
-        )
-    else:
-        print(f'--label-platform {args.label_platform} not supported')
+    if not args.local_train_dataset:
+        if args.label_platform == PLATFORM_CVAT:
+            print(f'deleting anything in {eval_dataset_dir} to start new')
+            eval_dirs = create_clear_dirs_eval(eval_dataset_dir)
+            pano_segmentation_training_set_fromyolo(
+                dataset_dir,
+                DATASET_JSON,
+                copy.deepcopy(COCO_JSON_SOURCE),
+                args,
+                eval_dirs)
+        elif args.label_platform == PLATFORM_LABEL_STUDIO:
+            pano_segmentation_training_set(
+                dataset_dir,
+                DATASET_JSON,
+                copy.deepcopy(COCO_JSON_SOURCE),
+                args.test_flag
+            )
+        else:
+            print(f'--label-platform {args.label_platform} not supported')
+
+        # make the evaluation test dataset of non-sliced images
+        eval_test_dataset(eval_dirs)
 
     if not args.evaluation_only:
 
         slice_pano_training_set(
+            args,
             dataset_dir,
             dataset_json_dir,
             dataset_sliced_dir)
@@ -176,8 +195,6 @@ def main(args):
             save_dir=coco_conv_dir,
             use_segments=True)
         split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
-
-    eval_test_dataset(eval_dirs)
 
 
 # run with `python -m dataset_generation -t`
