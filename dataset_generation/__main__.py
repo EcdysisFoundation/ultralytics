@@ -56,7 +56,7 @@ def get_args() -> argparse.Namespace:
                               "does not call api to get new ones. Evaluation dataset does not change"))
     parser.add_argument('--eval-percent', type=int, default=10,
                         help="percent of images to be placed in evaluation set")
-    parser.add_argument('--slice-size', type=int, default=3000,
+    parser.add_argument('--slice-size', type=int, default=2000,
                         help="image slicing dimensions for SAHI")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
@@ -121,8 +121,8 @@ def slice_pano_training_set(
         output_dir=dataset_sliced_dir,
         slice_height=args.slice_size,
         slice_width=args.slice_size,
-        overlap_height_ratio=0.2,
-        overlap_width_ratio=0.2,
+        overlap_height_ratio=0.4,
+        overlap_width_ratio=0.4,
         min_area_ratio=0.1,
         verbose=True
     )
@@ -131,12 +131,13 @@ def slice_pano_training_set(
 
 def main(args):
 
-    api_ping = get_root_message()
-    print(api_ping)
-    if ERROR_MSG_KEY in api_ping.keys():
+    if not args.local_train_dataset:
+        api_ping = get_root_message()
         print(api_ping)
-        print('Stitcher-FastAPI is not reachable, exting...')
-        return
+        if ERROR_MSG_KEY in api_ping.keys():
+            print(api_ping)
+            print('Stitcher-FastAPI is not reachable, exting...')
+            return
 
     curr_dir = os.getcwd()
     coco_conv_dir = f'{DATASET_PANO}/coco_converted'
