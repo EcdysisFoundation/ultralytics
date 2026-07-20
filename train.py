@@ -10,11 +10,11 @@ if __name__ == '__main__':
         epochs=400,
         patience=75,
         imgsz=1024,
-        batch=4,
-        workers=4,
+        batch=2,
+        workers=2,
         device=[0, 1],
         single_cls=True,
-        mask_ratio=1,  # use full resolution masks, dont down sample to reduce memory usage
+        mask_ratio=2,  # 1=='use full resolution masks', default=4, large effects on memory usage
         overlap_mask=False,  # dont merge overlapping objects
         cos_lr=True,  # learning rate decay to Cosine Annealing scheduler for maximum precision
         cls=0.3,  # Lower classification priority (since it's a single class)
