@@ -143,7 +143,7 @@ if __name__ == "__main__":
     dataset_json = f'{dataset_dir}dataset_test.json'
     images_root = f'{dataset_dir}images/test'
     eval_output_file = f'{dataset_dir}evaluation_result.jsonl'
-    eval_output_json = f"{dataset_dir}/evaluation_result.json"
+    eval_output_json = f"{dataset_dir}evaluation_result.json"
     output_dir = "local_files/output/"
     save_img_file = 1  # save an image file every n images
     run_evaluation_inference(dataset_json, images_root, eval_output_file, output_dir, save_img_file)

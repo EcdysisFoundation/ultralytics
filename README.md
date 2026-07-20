@@ -6,13 +6,13 @@ This repo tracks code we use with Ultrlaytics primarly for image segmentation us
 
 https://docs.ultralytics.com/guides/conda-quickstart/
 
-1. Create a fresh environment while forcing NumPy 1.x compatibility from the start
+1. Create a fresh environment
 
-`conda create --name ultralytics_n1 python=3.11 -y`
+`conda create --name ultralytics_cuda_p python=3.11 -y`
 
 2. Activate the new environment
 
-`conda activate ultralytics_n1`
+`conda activate ultralytics_cuda_p`
 
 3. Install core CUDA, PyTorch, and heavy framework binaries via Conda
 
@@ -24,6 +24,7 @@ conda install -y -c pytorch -c conda-forge \
     ultralytics \
     scikit-learn \
     scikit-image \
+    pandas \
     pycocotools
 ```
 
@@ -45,7 +46,7 @@ Check opencv version, `cv2.__version__` SAHI requires opencv-python>=4.12.0, if 
 
 `conda install -c conda-forge opencv=4.12.0`
 
-This will not get the .0.88 release on pip, so the warning may still appear, but should still avoid breaking changes from <4.12.
+This will not get the .0.88 release on pip, so a warning may still appear, but should still avoid breaking changes from <4.12.
 
 
 4. Install SAHI using pip without altering previous installations
@@ -60,11 +61,6 @@ This will not get the .0.88 release on pip, so the warning may still appear, but
 
 `pip install click fire tqdm`
 
-This workflow results in compatibility error
-```
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-sahi 0.12.1 requires opencv-python>=4.12.0.88, but you have opencv-python 4.10.0 which is incompatible.
-```
 
 [!TIP]
 Ultralytics uses a very large collection of libraries, including many common libraries like pandas and numpy. Integrations like SAHI may require many specific configurations as seen above. To avoid problems with Ultralytics, try to only use the libraries it includes and the minimum needed to run SAHI.
