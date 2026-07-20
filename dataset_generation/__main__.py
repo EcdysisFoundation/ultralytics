@@ -1,6 +1,7 @@
 import copy
 import os
 import sys
+import shutil
 import argparse
 import logging
 from pathlib import Path
@@ -140,7 +141,8 @@ def main(args):
             return
 
     curr_dir = os.getcwd()
-    coco_conv_dir = f'{DATASET_PANO}/coco_converted'
+    coco_converted_prefix = 'coco_converted'  # this will get created as coco_converted-2 if exists
+    coco_conv_dir = f'{DATASET_PANO}/{coco_converted_prefix}'
     dataset_json_dir = f'{curr_dir}/{DATASET_PANO}/{DATASET_JSON}'
     dataset_dir = f'{curr_dir}/{DATASET_PANO}'
     slice_dir = f'{DATASET_PANO}/sliced'
@@ -155,6 +157,11 @@ def main(args):
         if args.local_train_dataset:
             # clear training dataset directories, not DATASET_PANO
             base_dirs = create_clear_dirs()
+            # however, we need to clear any coco_converted, coco_converted-2, etc.
+            parent_dir = Path(DATASET_PANO)
+            for item_path in parent_dir.iterdir():
+                if item_path.is_dir() and item_path.name.startswith(coco_converted_prefix):
+                    shutil.rmtree(item_path)
         else:
             # clear DATASET_PANO to download new ones.
             print(f'clearing previous {DATASET_PANO} directory, will download new panos')
