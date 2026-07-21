@@ -512,6 +512,7 @@ def convert_yolo_to_coco(
 
 
 def resize_imgs_in_dir(source_dir: str, output_folder_name: str, target_max_dim: int):
+    print(f'resize_imgs_in_dir from {source_dir} to {output_folder_name}')
     source_path = Path(source_dir).resolve()
     output_path = source_path / output_folder_name
     if not source_path.exists():
@@ -524,6 +525,7 @@ def resize_imgs_in_dir(source_dir: str, output_folder_name: str, target_max_dim:
         # Skip directories and non-matching file extensions (ignoring the output folder itself)
         if file_path.is_file() and file_path.suffix.lower() in valid_extensions:
             try:
+                print(f'copy and resize {file_path}')
                 with Image.open(file_path) as img:
                     orig_w, orig_h = img.size
                     # Calculate target dimensions maintaining aspect ratio
@@ -566,9 +568,8 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
     processed_files = 0
     total_removed = 0
     # Iterate through images
-    img_paths = source_path.iterdir()
-    print(f"Filtering annotations smaller than {min_pixel_size}px in {len(img_paths)} label file(s).")
-    for img_path in img_paths:
+    print(f"Filtering annotations smaller than {min_pixel_size}px.")
+    for img_path in source_path.iterdir():
         if not (img_path.is_file() and img_path.suffix.lower() in valid_extensions):
             continue
 
