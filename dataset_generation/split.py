@@ -16,6 +16,8 @@ SEED = 42
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
+DATASET_PANO = 'dataset_pano'
+FULL_RESIZE_DIR = 'full_resized'
 
 
 def create_clear_dirs(dataset_pano=None):
@@ -28,10 +30,12 @@ def create_clear_dirs(dataset_pano=None):
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
     if dataset_pano:
-        dp_path = Path(dataset_pano)
+        dp_path = Path(DATASET_PANO)
         if os.path.exists(dp_path):
             shutil.rmtree(dp_path)
         dp_path.mkdir()
+        full_resized = Path(FULL_RESIZE_DIR)
+        full_resized.mkdir()
 
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
@@ -163,13 +167,14 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itestset):
+def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext='.png'):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
+    Supports only one, defined img_ext at a time.
     """
     print('Starting split_by_labels_train_val')
 
-    label_path = Path(sliced_coco_json_dir)
+    label_path = Path(label_dir)
     img_path = Path(image_dir)
     img_val = base_dirs['parent_images'] / 'val'
     img_train = base_dirs['parent_images'] / 'train'
@@ -188,7 +193,7 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itests
                 if a.count(txt) > 1:
                     print(f'WARNING: string assumption wrong, skipping {a}')
                     continue
-                img_file = a.replace('.txt', '.png')
+                img_file = a.replace('.txt', img_ext)
 
                 try:
                     copy(img_path / img_file, img_set_path)
@@ -197,7 +202,7 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itests
                     print(f'Problem with {a}, will not be included in training')
                     print(Exception)
 
-    all_entries = os.listdir(sliced_coco_json_dir)
+    all_entries = os.listdir(label_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     random_entries = random.sample(all_entries, num_in_validation)
     if itestset:

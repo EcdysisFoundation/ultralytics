@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import shutil
 from pathlib import Path
 from collections import Counter
 
@@ -327,7 +328,7 @@ def pano_segmentation_training_set_fromyolo(
         coco_json_source,
         args,
         eval_dirs,
-        anno_size_gte=50):
+        full_resize_dir):
     """
     Use the api and get yolo .txt files of training set.
     anno_size_gte, if not None, filters annotations to have
@@ -386,6 +387,7 @@ def pano_segmentation_training_set_fromyolo(
                 panorama_path = row['panorama_path'].replace('/media', '')
                 row['panorama_path'] = FILE_MOUNT + panorama_path
                 dst = dataset_path / file_name
+                yolo_label_dst = dataset_path / full_resize_dir / file_name
                 src = source_img_path / row['panorama_path'].replace('/media', '')
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
                 if src.is_file() and Path(label_path).is_file():
@@ -405,6 +407,8 @@ def pano_segmentation_training_set_fromyolo(
 
                     # add image to train and validation set
                     dst.symlink_to(src)
+                    # add label for seperate conversion use, do not symlink these will be modified.
+                    shutil.copy(Path(label_path), yolo_label_dst, follow_symlinks=True)
 
                     img_info = get_image_info(dst, img_index)
                     coco_anno = convert_yolo_to_coco(
@@ -413,7 +417,7 @@ def pano_segmentation_training_set_fromyolo(
                         img_info['height'],
                         img_index,
                         starting_anno_id,
-                        anno_size_gte)
+                        args.anno_size_gte)
                     # only include images with at least one annotation
                     if coco_anno:
                         print(f"{row['upload_dir_name']} has annotations, including in dataset")

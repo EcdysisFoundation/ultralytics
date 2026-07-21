@@ -15,7 +15,8 @@ from PIL import Image
 
 from .split import (
     create_clear_dirs, create_clear_dirs_eval, split_from_df,
-    split_by_labels_train_val, DATASETS_FOLDER
+    split_by_labels_train_val, DATASETS_FOLDER,
+    DATASET_PANO, FULL_RESIZE_DIR
 )
 from .stitcher_api import (
     pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs,
@@ -23,13 +24,15 @@ from .stitcher_api import (
 )
 from .eval_test_dataset import eval_test_dataset
 from .data import ObjectDetectData
-from .utils import convert_annotation_to_yolo, check_missing_files, generate_split_class_report
+from .utils import (
+    convert_annotation_to_yolo, check_missing_files, generate_split_class_report,
+    resize_imgs_in_dir, filter_small_yolo_annotations, remove_without_annotations
+)
 
 logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(logging.INFO)
 
-DATASET_PANO = 'dataset_pano'
 DATASET_JSON = 'dataset.json'
 COCO_JSON_SOURCE = {
         "images": [],
@@ -44,7 +47,7 @@ PLATFORM_LABEL_STUDIO = 'label-studio'
 
 
 def get_args() -> argparse.Namespace:
-
+    # python -m dataset_generation
     parser = argparse.ArgumentParser(description='Dataset generation')
     parser.add_argument(
         '--class-col', type=str, default='specimen__classification__gbif_order',
@@ -55,10 +58,13 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('-local', '--local-train-dataset', action='store_true',
                         help=("when set to true, this uses files already in DATASET_PANO and "
                               "does not call api to get new ones. Evaluation dataset does not change"))
+    parser.add_argument('--omit-fullsize', action='store_true',
+                        help="dont include the full size images to train for setting perform_standard_pred=True")
     parser.add_argument('--eval-percent', type=int, default=10,
                         help="percent of images to be placed in evaluation set")
     parser.add_argument('--slice-size', type=int, default=2000,
                         help="image slicing dimensions for SAHI")
+    parser.add_argument('--anno-size-gte', type=int, default=50)
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
@@ -165,7 +171,7 @@ def main(args):
         else:
             # clear DATASET_PANO to download new ones.
             print(f'clearing previous {DATASET_PANO} directory, will download new panos')
-            base_dirs = create_clear_dirs(dataset_pano=DATASET_PANO)
+            base_dirs = create_clear_dirs(dataset_pano=True)
 
     if not args.local_train_dataset:
         if args.label_platform == PLATFORM_CVAT:
@@ -176,8 +182,10 @@ def main(args):
                 DATASET_JSON,
                 copy.deepcopy(COCO_JSON_SOURCE),
                 args,
-                eval_dirs)
+                eval_dirs,
+                FULL_RESIZE_DIR)
         elif args.label_platform == PLATFORM_LABEL_STUDIO:
+            # possibly depricated
             pano_segmentation_training_set(
                 dataset_dir,
                 DATASET_JSON,
@@ -188,10 +196,10 @@ def main(args):
             print(f'--label-platform {args.label_platform} not supported')
 
         # make the evaluation test dataset of non-sliced images
+        # these were placed in eval_dirs from pano_segmentation_training_set_fromyolo
         eval_test_dataset(eval_dirs)
 
     if not args.evaluation_only:
-
         slice_pano_training_set(
             args,
             dataset_dir,
@@ -203,6 +211,17 @@ def main(args):
             save_dir=coco_conv_dir,
             use_segments=True)
         split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
+        if not args.omit_fullsize:
+            print('including full images along with slices, use --omit-fullsize to not')
+            resize_imgs_in_dir(dataset_dir, FULL_RESIZE_DIR, args.slice_size)
+            resize_dir = f'{dataset_dir}/{FULL_RESIZE_DIR}'
+            # use args.anno_size_gte to filter smallest annotations,
+            # but these will be smallar if anno_size_gte * (imgsz setting / slice-size) < anno_size_gte
+            filter_small_yolo_annotations(
+                image_dir=resize_dir, label_dir=resize_dir, min_pixel_size=args.anno_size_gte)
+            remaining_images = remove_without_annotations(image_dir=resize_dir, label_dir=resize_dir)
+            if remaining_images >= 6:
+                split_by_labels_train_val(resize_dir, resize_dir, base_dirs, args.include_testset)
 
 
 # run with `python -m dataset_generation -t`
