@@ -34,7 +34,7 @@ def create_clear_dirs(dataset_pano=None):
         if os.path.exists(dp_path):
             shutil.rmtree(dp_path)
         dp_path.mkdir()
-        full_resized = Path(FULL_RESIZE_DIR)
+        full_resized = Path(f'{DATASET_PANO}/{FULL_RESIZE_DIR}')
         full_resized.mkdir()
 
     subfolders = ('train', 'val', 'test')
