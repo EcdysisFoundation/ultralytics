@@ -188,6 +188,7 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext
     txt = '.txt'
 
     def copy_imgs(entries, img_set_path, label_set_path):
+        copied_entries = 0
         for a in entries:
             if a[-4:] == txt:
                 if a.count(txt) > 1:
@@ -198,9 +199,10 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext
                 try:
                     copy(img_path / img_file, img_set_path)
                     copy(label_path / a, label_set_path)
-                except Exception:
-                    print(f'Problem with {a}, will not be included in training')
-                    print(Exception)
+                    copied_entries += 1
+                except Exception as e:
+                    print(f'Warning: {a} will not be included in training: {e}')
+        return copied_entries
 
     all_entries = os.listdir(label_dir)
     num_in_validation = int(len(all_entries) * 0.2)
@@ -214,8 +216,8 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext
     else:
         val_entries = random_entries
     train_entries = [v for v in all_entries if v not in val_entries]
-    copy_imgs(val_entries, img_val, label_val)
-    copy_imgs(train_entries, img_train, label_train)
-    print(f'copied {len(val_entries)} val_entries')
-    print(f'copied {len(train_entries)} train_entries')
+    copied_entries_val = copy_imgs(val_entries, img_val, label_val)
+    copied_entries_train = copy_imgs(train_entries, img_train, label_train)
+    print(f'copied {copied_entries_val} val_entries')
+    print(f'copied {copied_entries_train} train_entries')
     print('Completed split_by_labels_train_val.')
