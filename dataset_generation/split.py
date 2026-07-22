@@ -167,7 +167,7 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext='.png'):
+def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
     Supports only one, defined img_ext at a time.
@@ -185,34 +185,30 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset, img_ext
         img_test = base_dirs['parent_images'] / 'test'
         label_test = base_dirs['parent_labels'] / 'test'
 
-    txt = '.txt'
+    valid_img_extensions = {".jpg", ".jpeg", ".png"}
 
     def copy_imgs(entries, img_set_path, label_set_path):
         copied_entries = 0
-        for a in entries:
-            if a[-4:] == txt:
-                if a.count(txt) > 1:
-                    print(f'WARNING: string assumption wrong, skipping {a}')
-                    continue
-                img_file = a.replace('.txt', img_ext)
-
+        for img_e in entries:
+            if img_e.suffix.lower() in valid_img_extensions:
+                label_file = Path(img_e).with_suffix('.txt')
                 try:
-                    copy(img_path / img_file, img_set_path)
-                    copy(label_path / a, label_set_path)
+                    copy(img_path / img_e, img_set_path)
+                    copy(label_path / label_file, label_set_path)
                     copied_entries += 1
                 except Exception as e:
-                    print(f'Warning: {a} will not be included in training: {e}')
+                    print(f'Warning: {img_e} and {label_file} will not be included in training: {e}')
         return copied_entries
 
-    all_entries = os.listdir(label_dir)
+    all_entries = os.listdir(image_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     random_entries = random.sample(all_entries, num_in_validation)
     if itestset:
         num_half_random = int(len(random_entries) * 0.5)
         val_entries = random.sample(random_entries, num_half_random)
         test_entries = [v for v in random_entries if v not in val_entries]
-        copy_imgs(test_entries, img_test, label_test)
-        print(f'copied {len(test_entries)} test_entries')
+        copied_test_entries = copy_imgs(test_entries, img_test, label_test)
+        print(f'copied {copied_test_entries} test_entries')
     else:
         val_entries = random_entries
     train_entries = [v for v in all_entries if v not in val_entries]
