@@ -190,7 +190,7 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset):
     def copy_imgs(entries, img_set_path, label_set_path):
         copied_entries = 0
         for img_e in entries:
-            if img_e.suffix.lower() in valid_img_extensions:
+            if Path(img_e).suffix.lower() in valid_img_extensions:
                 label_file = Path(img_e).with_suffix('.txt')
                 try:
                     copy(img_path / img_e, img_set_path)
