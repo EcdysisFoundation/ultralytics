@@ -6,7 +6,7 @@ import pandas as pd
 import shutil
 from sklearn.model_selection import train_test_split
 from pathlib import Path
-from shutil import copy, SameFileError
+from shutil
 from tqdm import tqdm
 
 from .utils import save_yaml_file, check_minimum_length
@@ -16,6 +16,8 @@ SEED = 42
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 DATASETS_FOLDER = 'datasets'
+DATASET_PANO = 'dataset_pano'
+FULL_RESIZE_DIR = 'full_resized'
 
 
 def create_clear_dirs(dataset_pano=None):
@@ -28,10 +30,12 @@ def create_clear_dirs(dataset_pano=None):
     if os.path.exists(parent_labels):
         shutil.rmtree(parent_labels)
     if dataset_pano:
-        dp_path = Path(dataset_pano)
+        dp_path = Path(DATASET_PANO)
         if os.path.exists(dp_path):
             shutil.rmtree(dp_path)
         dp_path.mkdir()
+        full_resized = Path(f'{DATASET_PANO}/{FULL_RESIZE_DIR}')
+        full_resized.mkdir()
 
     subfolders = ('train', 'val', 'test')
     for name in subfolders:
@@ -77,8 +81,8 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     def copy_img(src: Path, dst: Path):
         logger.debug(f'Copying {src} to {dst}')
         try:
-            copy(src, dst, follow_symlinks=True)
-        except SameFileError:
+            shutil.copy(src, dst, follow_symlinks=True)
+        except shutil.SameFileError:
             logger.warning(f'File {dst} already present, skipping')
 
     for split_name, split_img in splits[c].items():
@@ -163,13 +167,14 @@ def split_from_df(
     return splits
 
 
-def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itestset):
+def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset):
     """
     Using a directory of labelfiles and imgs, structure traing set for one class.
+    Supports only one, defined img_ext at a time.
     """
     print('Starting split_by_labels_train_val')
 
-    label_path = Path(sliced_coco_json_dir)
+    label_path = Path(label_dir)
     img_path = Path(image_dir)
     img_val = base_dirs['parent_images'] / 'val'
     img_train = base_dirs['parent_images'] / 'train'
@@ -180,37 +185,39 @@ def split_by_labels_train_val(sliced_coco_json_dir, image_dir, base_dirs, itests
         img_test = base_dirs['parent_images'] / 'test'
         label_test = base_dirs['parent_labels'] / 'test'
 
-    txt = '.txt'
+    valid_img_extensions = {".jpg", ".jpeg", ".png"}
 
     def copy_imgs(entries, img_set_path, label_set_path):
-        for a in entries:
-            if a[-4:] == txt:
-                if a.count(txt) > 1:
-                    print(f'WARNING: string assumption wrong, skipping {a}')
-                    continue
-                img_file = a.replace('.txt', '.png')
+        copied_entries = 0
+        for img_e in entries:
+            if Path(img_e).suffix.lower() in valid_img_extensions:
+                label_file = Path(img_e).with_suffix('.txt')
+                full_label_path = label_path / label_file
+                # Images may be present that do not have annotations because they were empty
+                # and no yolo version files were made in that case. We check for that here.
+                if full_label_path.exists():
+                    try:
+                        shutil.copy(img_path / img_e, img_set_path)
+                        shutil.copy(full_label_path, label_set_path)
+                        copied_entries += 1
+                    except Exception as e:
+                        print(f'Warning: {img_e} and {label_file} will not be included in training: {e}')
+        return copied_entries
 
-                try:
-                    copy(img_path / img_file, img_set_path)
-                    copy(label_path / a, label_set_path)
-                except Exception:
-                    print(f'Problem with {a}, will not be included in training')
-                    print(Exception)
-
-    all_entries = os.listdir(sliced_coco_json_dir)
+    all_entries = os.listdir(image_dir)
     num_in_validation = int(len(all_entries) * 0.2)
     random_entries = random.sample(all_entries, num_in_validation)
     if itestset:
         num_half_random = int(len(random_entries) * 0.5)
         val_entries = random.sample(random_entries, num_half_random)
         test_entries = [v for v in random_entries if v not in val_entries]
-        copy_imgs(test_entries, img_test, label_test)
-        print(f'copied {len(test_entries)} test_entries')
+        copied_test_entries = copy_imgs(test_entries, img_test, label_test)
+        print(f'copied {copied_test_entries} test_entries')
     else:
         val_entries = random_entries
     train_entries = [v for v in all_entries if v not in val_entries]
-    copy_imgs(val_entries, img_val, label_val)
-    copy_imgs(train_entries, img_train, label_train)
-    print(f'copied {len(val_entries)} val_entries')
-    print(f'copied {len(train_entries)} train_entries')
+    copied_entries_val = copy_imgs(val_entries, img_val, label_val)
+    copied_entries_train = copy_imgs(train_entries, img_train, label_train)
+    print(f'copied {copied_entries_val} val_entries')
+    print(f'copied {copied_entries_train} train_entries')
     print('Completed split_by_labels_train_val.')

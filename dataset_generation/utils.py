@@ -446,6 +446,33 @@ def calculate_polygon_area(xs, ys):
     return abs(area) / 2.0
 
 
+def get_yolo_parts_to_coco(parts, image_width, image_height):
+    class_id = int(parts[0]) + 1
+    poly_normalized = list(map(float, parts[1:]))
+
+    # Convert to pixel coordinates
+    poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
+
+    # Calculate simple Bbox from polygon (min/max x, min/max y)
+    xs = poly_pixels[0::2]
+    ys = poly_pixels[1::2]
+    x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
+    width, height = x_max - x_min, y_max - y_min
+    x_min = int(x_min)
+    y_min = int(y_min)
+    width = int(width)
+    height = int(height)
+    poly_area = round(calculate_polygon_area(xs, ys), 2)
+    return {
+        'width': width,
+        'height': height,
+        'poly_area': poly_area,
+        'class_id': class_id,
+        'poly_pixels': poly_pixels,
+        'bbox': [x_min, y_min, width, height]
+    }
+
+
 def convert_yolo_to_coco(
         yolo_file,
         image_width,
@@ -464,37 +491,23 @@ def convert_yolo_to_coco(
             parts = line.strip().split()
             if not parts or len(parts) < 7:  # A valid polygon needs at least 3 points (1 class + 6 coords)
                 continue
-            class_id = int(parts[0]) + 1
-            poly_normalized = list(map(float, parts[1:]))
 
-            # Convert to pixel coordinates
-            poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
-
-            # Calculate simple Bbox from polygon (min/max x, min/max y)
-            xs = poly_pixels[0::2]
-            ys = poly_pixels[1::2]
-            x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
-            width, height = x_max - x_min, y_max - y_min
-            x_min = int(x_min)
-            y_min = int(y_min)
-            width = int(width)
-            height = int(height)
+            coco_parts = get_yolo_parts_to_coco(parts, image_width, image_height)
 
             # Filter out annotations smaller than the threshold or tiny area
-            if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
+            if anno_size_gte and (coco_parts['width'] < anno_size_gte or coco_parts['height'] < anno_size_gte):
                 continue
 
-            poly_area = round(calculate_polygon_area(xs, ys), 2)
-            if poly_area < 1.0:
+            if coco_parts['poly_area'] < 1.0:
                 continue
 
             coco_rec = {
                 "id": anno_id,
                 "image_id": image_id,
-                "category_id": class_id,
-                "segmentation": [poly_pixels],
-                "area": poly_area,
-                "bbox": [x_min, y_min, width, height],
+                "category_id": coco_parts['class_id'],
+                "segmentation": [coco_parts['poly_pixels']],
+                "area": coco_parts['poly_area'],
+                "bbox": coco_parts['bbox'],
                 "iscrowd": 0,
                 "ignore": 0
             }
@@ -509,3 +522,146 @@ def convert_yolo_to_coco(
             anno_id += 1
 
     return coco_results
+
+
+def resize_imgs_in_dir(source_dir: str, output_folder_name: str, target_max_dim: int):
+    print(f'resize_imgs_in_dir from {source_dir} to {output_folder_name}')
+    source_path = Path(source_dir).resolve()
+    output_path = source_path / output_folder_name
+    if not source_path.exists():
+        raise FileNotFoundError(f"Source directory '{source_path}' does not exist.")
+    # Allowed extensions (case-insensitive)
+    valid_extensions = {".jpg", ".jpeg", ".png"}
+    processed_count = 0
+    # Iterate through files in the source directory
+    for file_path in source_path.iterdir():
+        # Skip directories and non-matching file extensions (ignoring the output folder itself)
+        if file_path.is_file() and file_path.suffix.lower() in valid_extensions:
+            try:
+                print(f'copy and resize {file_path}')
+                with Image.open(file_path) as img:
+                    orig_w, orig_h = img.size
+                    # Calculate target dimensions maintaining aspect ratio
+                    if orig_w >= orig_h:
+                        new_w = target_max_dim
+                        new_h = max(1, int(orig_h * (target_max_dim / orig_w)))
+                    else:
+                        new_h = target_max_dim
+                        new_w = max(1, int(orig_w * (target_max_dim / orig_h)))
+                    # High-quality resize algorithm
+                    resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                    # Handle image mode compatibility (e.g., RGBA PNG saved to JPG)
+                    ext = file_path.suffix.lower()
+                    if ext in {".jpg", ".jpeg"} and resized_img.mode in ("RGBA", "P"):
+                        resized_img = resized_img.convert("RGB")
+                    # Save resized image to the new output folder
+                    save_destination = output_path / file_path.name
+                    resized_img.save(save_destination)
+                    processed_count += 1
+            except Exception as e:
+                print(f"✖ Failed to resize {file_path.name}: {e}")
+    print(f"\nDone! Successfully resized {processed_count} image(s).")
+    print(f"Saved to: {output_path}")
+
+
+def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size: int):
+    """
+    Scans a directory for images and matching YOLO segmentation .txt files.
+    Calculates the bounding box width and height in pixels for each annotation,
+    and removes any annotation where either dimension is below min_pixel_size.
+    """
+    source_path = Path(image_dir).resolve()
+    label_path = Path(label_dir).resolve()
+    valid_extensions = {".jpg", ".jpeg", ".png"}
+    if not source_path.exists():
+        raise FileNotFoundError(f"Directory '{source_path}' does not exist.")
+    if not label_path.exists():
+        raise FileNotFoundError(f"Directory '{label_path}' does not exist.")
+
+    processed_files = 0
+    total_removed = 0
+    # Iterate through images
+    print(f"Filtering annotations smaller than {min_pixel_size}px.")
+    for img_path in source_path.iterdir():
+        if not img_path.suffix.lower() in valid_extensions:
+            continue
+
+        txt_path = label_path / f'{img_path.stem}.txt'
+        if not txt_path.exists():
+            print(f'Warning: {txt_path} does not exist, skipping')
+            continue
+
+        # Get image dimensions to convert normalized coordinates to pixels
+        with Image.open(img_path) as img:
+            image_width, image_height = img.size
+        # Read annotation lines
+        with open(txt_path, "r") as f:
+            lines = f.readlines()
+        kept_lines = []
+        removed_in_file = 0
+        for line in lines:
+            parts = line.strip().split()
+            # YOLO segmentation line: class_id x1 y1 x2 y2 ... (at least 3 x/y pairs)
+            if not parts or len(parts) < 7:
+                continue
+
+            coco_parts = get_yolo_parts_to_coco(parts, image_width, image_height)
+            # Filter out annotations smaller than the threshold or tiny area
+            if coco_parts['width'] < min_pixel_size or coco_parts['height'] < min_pixel_size:
+                removed_in_file += 1
+            else:
+                kept_lines.append(line.strip() + "\n")
+
+        # Overwrite the .txt file with the filtered annotations
+        with open(txt_path, "w") as f:
+            f.writelines(kept_lines)
+
+        processed_files += 1
+        total_removed += removed_in_file
+
+    print(f"Total annotations removed from {processed_files} files is {total_removed}")
+
+
+def remove_without_annotations(image_dir: str, label_dir: str):
+    image_path = Path(image_dir).resolve()
+    label_path = Path(label_dir).resolve()
+    if not label_path.exists() or not image_path.exists():
+        raise FileNotFoundError(
+            "Provided image or label directory does not exist."
+        )
+
+    # Allowed image extensions to check for matching stems
+    valid_img_extensions = {".jpg", ".jpeg", ".png"}
+    total_files = 0
+    removed_count = 0
+    for file_path in label_path.glob("*.txt"):
+        if file_path.is_file():
+            total_files += 1
+            content = file_path.read_text(encoding="utf-8")
+            # .strip() removes whitespace, ensuring files with just spaces/newlines count as empty
+            if not content.strip():
+                # 1. Delete the empty label file
+                file_path.unlink()
+
+                # 2. Search for and delete the matching image file in image_dir
+                image_found = False
+                for ext in valid_img_extensions:
+                    img_file = image_path / f"{file_path.stem}{ext}"
+                    if img_file.exists():
+                        img_file.unlink()
+                        image_found = True
+                        print(
+                            f"🗑 Removed empty label '{file_path.name}' and image '{img_file.name}'"
+                        )
+                        break
+
+                if not image_found:
+                    print(
+                        f"🗑 Removed empty label '{file_path.name}' (no matching image found in image_dir)"
+                    )
+
+                removed_count += 1
+
+    print(f"Scanned {total_files} label file(s)")
+    print(f"Removed {removed_count} unannotated pair(s).")
+    return total_files - removed_count
