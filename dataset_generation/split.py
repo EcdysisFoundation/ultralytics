@@ -6,7 +6,7 @@ import pandas as pd
 import shutil
 from sklearn.model_selection import train_test_split
 from pathlib import Path
-from shutil import copy, SameFileError
+from shutil
 from tqdm import tqdm
 
 from .utils import save_yaml_file, check_minimum_length
@@ -81,8 +81,8 @@ def save_class_images(splits: dict, c: str, df, class_to_index, dirs, args):
     def copy_img(src: Path, dst: Path):
         logger.debug(f'Copying {src} to {dst}')
         try:
-            copy(src, dst, follow_symlinks=True)
-        except SameFileError:
+            shutil.copy(src, dst, follow_symlinks=True)
+        except shutil.SameFileError:
             logger.warning(f'File {dst} already present, skipping')
 
     for split_name, split_img in splits[c].items():
@@ -192,12 +192,16 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset):
         for img_e in entries:
             if Path(img_e).suffix.lower() in valid_img_extensions:
                 label_file = Path(img_e).with_suffix('.txt')
-                try:
-                    copy(img_path / img_e, img_set_path)
-                    copy(label_path / label_file, label_set_path)
-                    copied_entries += 1
-                except Exception as e:
-                    print(f'Warning: {img_e} and {label_file} will not be included in training: {e}')
+                full_label_path = label_path / label_file
+                # Images may be present that do not have annotations because they were empty
+                # and no yolo version files were made in that case. We check for that here.
+                if full_label_path.exists():
+                    try:
+                        shutil.copy(img_path / img_e, img_set_path)
+                        shutil.copy(full_label_path, label_set_path)
+                        copied_entries += 1
+                    except Exception as e:
+                        print(f'Warning: {img_e} and {label_file} will not be included in training: {e}')
         return copied_entries
 
     all_entries = os.listdir(image_dir)
