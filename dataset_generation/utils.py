@@ -583,10 +583,10 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
     # Iterate through images
     print(f"Filtering annotations smaller than {min_pixel_size}px.")
     for img_path in source_path.iterdir():
-        if not (img_path.is_file() and img_path.suffix.lower() in valid_extensions):
+        if not img_path.suffix.lower() in valid_extensions:
             continue
 
-        txt_path = label_path / img_path.with_suffix(".txt").name
+        txt_path = label_path / f'{img_path.name}.txt'
         if not txt_path.exists():
             print(f'Warning: {txt_path} does not exist, skipping')
             continue
@@ -619,7 +619,7 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
         processed_files += 1
         total_removed += removed_in_file
 
-    print(f"Total annotations removed below {min_pixel_size}px threshold: {total_removed}")
+    print(f"Total annotations removed from {processed_files} files is {total_removed}")
 
 
 def remove_without_annotations(image_dir: str, label_dir: str):
