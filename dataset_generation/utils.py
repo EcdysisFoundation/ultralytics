@@ -446,6 +446,33 @@ def calculate_polygon_area(xs, ys):
     return abs(area) / 2.0
 
 
+def get_yolo_parts_to_coco(parts, image_width, image_height):
+    class_id = int(parts[0]) + 1
+    poly_normalized = list(map(float, parts[1:]))
+
+    # Convert to pixel coordinates
+    poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
+
+    # Calculate simple Bbox from polygon (min/max x, min/max y)
+    xs = poly_pixels[0::2]
+    ys = poly_pixels[1::2]
+    x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
+    width, height = x_max - x_min, y_max - y_min
+    x_min = int(x_min)
+    y_min = int(y_min)
+    width = int(width)
+    height = int(height)
+    poly_area = round(calculate_polygon_area(xs, ys), 2)
+    return {
+        'width': width,
+        'height': height,
+        'poly_area': poly_area,
+        'class_id': class_id,
+        'poly_pixels': poly_pixels,
+        'bbox': [x_min, y_min, width, height]
+    }
+
+
 def convert_yolo_to_coco(
         yolo_file,
         image_width,
@@ -464,37 +491,23 @@ def convert_yolo_to_coco(
             parts = line.strip().split()
             if not parts or len(parts) < 7:  # A valid polygon needs at least 3 points (1 class + 6 coords)
                 continue
-            class_id = int(parts[0]) + 1
-            poly_normalized = list(map(float, parts[1:]))
 
-            # Convert to pixel coordinates
-            poly_pixels = yolo_to_coco_poly(poly_normalized, image_width, image_height)
-
-            # Calculate simple Bbox from polygon (min/max x, min/max y)
-            xs = poly_pixels[0::2]
-            ys = poly_pixels[1::2]
-            x_min, y_min, x_max, y_max = min(xs), min(ys), max(xs), max(ys)
-            width, height = x_max - x_min, y_max - y_min
-            x_min = int(x_min)
-            y_min = int(y_min)
-            width = int(width)
-            height = int(height)
+            coco_parts = get_yolo_parts_to_coco(parts, image_width, image_height)
 
             # Filter out annotations smaller than the threshold or tiny area
-            if anno_size_gte and (width < anno_size_gte or height < anno_size_gte):
+            if anno_size_gte and (coco_parts['width'] < anno_size_gte or coco_parts['height'] < anno_size_gte):
                 continue
 
-            poly_area = round(calculate_polygon_area(xs, ys), 2)
-            if poly_area < 1.0:
+            if coco_parts['poly_area'] < 1.0:
                 continue
 
             coco_rec = {
                 "id": anno_id,
                 "image_id": image_id,
-                "category_id": class_id,
-                "segmentation": [poly_pixels],
-                "area": poly_area,
-                "bbox": [x_min, y_min, width, height],
+                "category_id": coco_parts['class_id'],
+                "segmentation": [coco_parts['poly_pixels']],
+                "area": coco_parts['poly_area'],
+                "bbox": coco_parts['bbox'],
                 "iscrowd": 0,
                 "ignore": 0
             }
@@ -552,8 +565,8 @@ def resize_imgs_in_dir(source_dir: str, output_folder_name: str, target_max_dim:
 
 
 def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size: int):
-    """Scans a directory for images and matching YOLO segmentation .txt files.
-
+    """
+    Scans a directory for images and matching YOLO segmentation .txt files.
     Calculates the bounding box width and height in pixels for each annotation,
     and removes any annotation where either dimension is below min_pixel_size.
     """
@@ -576,11 +589,12 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
         # Check for corresponding .txt file
         txt_path = label_path.with_suffix(".txt")
         if not txt_path.exists():
+            print(f'Warning: {txt_path} does not exist, skipping {label_path}')
             continue
 
         # Get image dimensions to convert normalized coordinates to pixels
         with Image.open(img_path) as img:
-            img_w, img_h = img.size
+            image_width, image_height = img.size
         # Read annotation lines
         with open(txt_path, "r") as f:
             lines = f.readlines()
@@ -592,18 +606,13 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
             if not parts or len(parts) < 7:
                 continue
 
-            coords = [float(p) for p in parts[1:]]  # class_id = parts[0]
-            # Separate normalized x (even indices) and y (odd indices) coordinates
-            x_coords = coords[0::2]
-            y_coords = coords[1::2]
-            # Calculate bounding box dimensions in actual pixels
-            bbox_w_px = (max(x_coords) - min(x_coords)) * img_w
-            bbox_h_px = (max(y_coords) - min(y_coords)) * img_h
-            # Filter: Keep only if BOTH width and height meet or exceed threshold
-            if bbox_w_px >= min_pixel_size and bbox_h_px >= min_pixel_size:
-                kept_lines.append(line.strip() + "\n")
-            else:
+            coco_parts = get_yolo_parts_to_coco(parts, image_width, image_height)
+            # Filter out annotations smaller than the threshold or tiny area
+            if coco_parts['width'] < min_pixel_size or coco_parts['height'] < min_pixel_size:
                 removed_in_file += 1
+            else:
+                kept_lines.append(line.strip() + "\n")
+
         # Overwrite the .txt file with the filtered annotations
         with open(txt_path, "w") as f:
             f.writelines(kept_lines)
