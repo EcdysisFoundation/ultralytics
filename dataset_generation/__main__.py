@@ -184,14 +184,6 @@ def main(args):
                 args,
                 eval_dirs,
                 FULL_RESIZE_DIR)
-        elif args.label_platform == PLATFORM_LABEL_STUDIO:
-            # possibly depricated
-            pano_segmentation_training_set(
-                dataset_dir,
-                DATASET_JSON,
-                copy.deepcopy(COCO_JSON_SOURCE),
-                args.test_flag
-            )
         else:
             print(f'--label-platform {args.label_platform} not supported')
 

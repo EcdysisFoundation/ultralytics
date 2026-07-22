@@ -654,6 +654,6 @@ def remove_without_annotations(image_dir: str, label_dir: str):
 
                 removed_count += 1
 
-    print(f"Scanned {total_files} label file(s) empty annotations")
+    print(f"Scanned {total_files} label file(s)")
     print(f"Removed {removed_count} unannotated pair(s).")
     return total_files - removed_count
