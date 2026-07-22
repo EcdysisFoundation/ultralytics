@@ -586,7 +586,7 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
         if not img_path.suffix.lower() in valid_extensions:
             continue
 
-        txt_path = label_path / f'{img_path.name}.txt'
+        txt_path = label_path / f'{img_path.stem}.txt'
         if not txt_path.exists():
             print(f'Warning: {txt_path} does not exist, skipping')
             continue
