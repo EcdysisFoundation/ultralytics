@@ -73,7 +73,7 @@ def get_root_message():
 
 def pano_object_detection_training_set():
     """
-    Potentially broken, moved here after previous use.
+    Depricated.
     For object detection SAHI training set
     """
 
@@ -167,6 +167,7 @@ def pano_segmentation_training_set(
         test_flag,
         anno_size_gte=50):
     """
+    Depricated
     Use the api and get .json file of training set.
     anno_size_gte, if not None, filters annotations to have
     at least a width and height of the bounding box in
@@ -387,16 +388,17 @@ def pano_segmentation_training_set_fromyolo(
                 panorama_path = row['panorama_path'].replace('/media', '')
                 row['panorama_path'] = FILE_MOUNT + panorama_path
                 dst = dataset_path / file_name
-                yolo_label_dst = dataset_path / full_resize_dir / file_name
                 src = source_img_path / row['panorama_path'].replace('/media', '')
                 label_path = f"{CVAT_LABEL_DIR}/{row['label_project_dir']}/{row['label_file']}"
+                label_name_base, _ = os.path.splitext(file_name)
+                label_name = f"{label_name_base}.txt"
+                yolo_label_dst = dataset_path / full_resize_dir / label_name
                 if src.is_file() and Path(label_path).is_file():
 
                     if (is_eval_trigger := (total_img_count % eval_interval) == 0) or args.evaluation_only:
                         if is_eval_trigger:
                             print(f'including {file_name} in test evaluation dataset to include {eval_img_count + 1} images')
-                            label_name_base, _ = os.path.splitext(file_name)
-                            label_name = f"{label_name_base}.txt"
+
                             eval_img_dst = eval_dirs['images_path'] / file_name
                             eval_label_dst = eval_dirs['labels_path'] / label_name
                             eval_img_dst.symlink_to(src)
