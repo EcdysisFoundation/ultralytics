@@ -586,10 +586,9 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
         if not (img_path.is_file() and img_path.suffix.lower() in valid_extensions):
             continue
 
-        # Check for corresponding .txt file
-        txt_path = label_path.with_suffix(".txt")
+        txt_path = label_path / img_path.with_suffix(".txt").name
         if not txt_path.exists():
-            print(f'Warning: {txt_path} does not exist, skipping {label_path}')
+            print(f'Warning: {txt_path} does not exist, skipping')
             continue
 
         # Get image dimensions to convert normalized coordinates to pixels
