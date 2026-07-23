@@ -23,7 +23,6 @@ if __name__ == '__main__':
         dfl=2.0,  # Sharpen fine-grained edge regression for fine details
         # end cls offset
         # augmentations
-        degrees=180.0,  # allow any angle
         fliplr=0.5,  # horizontal flip probability
         flipud=0.5,  # vertical flip probability
         mosaic=0.0,  # turn off mosaic augmentation

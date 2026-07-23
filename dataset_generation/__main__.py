@@ -19,7 +19,7 @@ from .split import (
     DATASET_PANO, FULL_RESIZE_DIR
 )
 from .stitcher_api import (
-    pano_segmentation_training_set_fromyolo, pano_segmentation_training_set, count_initial_training_recs,
+    pano_segmentation_training_set_fromyolo, count_initial_training_recs,
     get_root_message, ERROR_MSG_KEY
 )
 from .eval_test_dataset import eval_test_dataset
