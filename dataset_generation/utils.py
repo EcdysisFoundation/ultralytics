@@ -663,7 +663,7 @@ def remove_images_without_labelfiles(image_dir: str, label_dir: str, percent_bac
         return total_files
 
     this_proportion = len(filepaths_wo_labels) / total_files
-    to_remove_proportion = percent_background / this_proportion
+    to_remove_proportion = (percent_background / 100) / this_proportion
     sample_size = round(len(filepaths_wo_labels) * to_remove_proportion)
     selected_items = set(random.sample(filepaths_wo_labels, sample_size))
     remove_items = [v for v in filepaths_wo_labels if v not in selected_items]
