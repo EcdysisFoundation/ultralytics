@@ -407,11 +407,6 @@ def pano_segmentation_training_set_fromyolo(
                         total_img_count += 1
                         continue
 
-                    # add image to train and validation set
-                    dst.symlink_to(src)
-                    # add label for seperate conversion use, do not symlink these will be modified.
-                    shutil.copy(Path(label_path), yolo_label_dst, follow_symlinks=True)
-
                     img_info = get_image_info(dst, img_index)
                     coco_anno = convert_yolo_to_coco(
                         label_path,
@@ -423,6 +418,11 @@ def pano_segmentation_training_set_fromyolo(
                     # only include images with at least one annotation
                     if coco_anno:
                         print(f"{row['upload_dir_name']} has annotations, including in dataset")
+                        # add image to train and validation set
+                        dst.symlink_to(src)
+                        # add yolo label for seperate conversion use, do not symlink these will be modified.
+                        shutil.copy(Path(label_path), yolo_label_dst, follow_symlinks=True)
+                        # include annotations to json
                         coco_json_source["images"].append(img_info)
                         coco_json_source['annotations'] += coco_anno
                         img_index += 1
