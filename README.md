@@ -93,6 +93,14 @@ To run on both GPU's, there will be an error due to Intel library incompatibilit
 
 To resolve `Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library.`
 
+Some memory savings can be found by avoiding VRAM fragmentation by using expandable segements. Run this before the training command.
+
+`export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"`
+
+When starting the training, be sure to check the inital output for expected numbers. If changing the datset, it may be best to clear the cache first to avoid problems.
+
+`rm /home/ecdysis/ultralytics/datasets/labels/*.cache`
+
 ### Deployment
 
 zip the entire dir to download and examine output
