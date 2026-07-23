@@ -6,7 +6,6 @@ import pandas as pd
 import shutil
 from sklearn.model_selection import train_test_split
 from pathlib import Path
-from shutil
 from tqdm import tqdm
 
 from .utils import save_yaml_file, check_minimum_length, VALID_IMG_EXTENSIONS
