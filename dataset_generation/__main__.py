@@ -76,8 +76,8 @@ def get_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.eval_percent < 0 or args.eval_percent > 100:
         raise ValueError(f'args.eval_percent cannot be < 0 or > 100, you entered {args.eval_percent}')
-    if args.percent_background < 0 or args.precent_background > 100:
-        raise ValueError(f'args.precent_background cannot be < 0 or > 100, you entered {args.precent_background}')
+    if args.percent_background < 0 or args.percent_background > 100:
+        raise ValueError(f'args.percent_background cannot be < 0 or > 100, you entered {args.percent_background}')
     if args.evaluation_only and args.local_train_dataset:
         raise ValueError('args.evaluation_only and args.local_train_dataset at the same time is not valid.')
     return args
