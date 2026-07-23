@@ -9,7 +9,7 @@ from pathlib import Path
 from shutil
 from tqdm import tqdm
 
-from .utils import save_yaml_file, check_minimum_length
+from .utils import save_yaml_file, check_minimum_length, VALID_IMG_EXTENSIONS
 
 
 SEED = 42
@@ -185,12 +185,10 @@ def split_by_labels_train_val(label_dir, image_dir, base_dirs, itestset):
         img_test = base_dirs['parent_images'] / 'test'
         label_test = base_dirs['parent_labels'] / 'test'
 
-    valid_img_extensions = {".jpg", ".jpeg", ".png"}
-
     def copy_imgs(entries, img_set_path, label_set_path):
         copied_entries = 0
         for img_e in entries:
-            if Path(img_e).suffix.lower() in valid_img_extensions:
+            if Path(img_e).suffix.lower() in VALID_IMG_EXTENSIONS:
                 label_file = Path(img_e).with_suffix('.txt')
                 full_label_path = label_path / label_file
                 # Images may be present that do not have annotations because they were empty

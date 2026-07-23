@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import yaml
+import random
 from PIL import Image
 
 from pathlib import Path
@@ -19,6 +20,7 @@ stream_handler = logging.StreamHandler(sys.stdout)
 logger.setLevel(logging.INFO)
 
 FILE_MOUNT = '/pool1/srv/label-studio/mydata/stitchermedia'
+VALID_IMG_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 
 def make_yaml_dict(dataset_folder, class_index):
@@ -622,46 +624,50 @@ def filter_small_yolo_annotations(image_dir: str, label_dir: str, min_pixel_size
     print(f"Total annotations removed from {processed_files} files is {total_removed}")
 
 
-def remove_without_annotations(image_dir: str, label_dir: str):
-    image_path = Path(image_dir).resolve()
-    label_path = Path(label_dir).resolve()
-    if not label_path.exists() or not image_path.exists():
-        raise FileNotFoundError(
-            "Provided image or label directory does not exist."
-        )
-
-    # Allowed image extensions to check for matching stems
-    valid_img_extensions = {".jpg", ".jpeg", ".png"}
+def remove_blank_annotations(label_dir: str):
+    label_path = Path(label_dir).resolve(strict=True)
     total_files = 0
     removed_count = 0
     for file_path in label_path.glob("*.txt"):
         if file_path.is_file():
             total_files += 1
             content = file_path.read_text(encoding="utf-8")
-            # .strip() removes whitespace, ensuring files with just spaces/newlines count as empty
             if not content.strip():
-                # 1. Delete the empty label file
                 file_path.unlink()
-
-                # 2. Search for and delete the matching image file in image_dir
-                image_found = False
-                for ext in valid_img_extensions:
-                    img_file = image_path / f"{file_path.stem}{ext}"
-                    if img_file.exists():
-                        img_file.unlink()
-                        image_found = True
-                        print(
-                            f"🗑 Removed empty label '{file_path.name}' and image '{img_file.name}'"
-                        )
-                        break
-
-                if not image_found:
-                    print(
-                        f"🗑 Removed empty label '{file_path.name}' (no matching image found in image_dir)"
-                    )
-
                 removed_count += 1
 
     print(f"Scanned {total_files} label file(s)")
     print(f"Removed {removed_count} unannotated pair(s).")
     return total_files - removed_count
+
+
+def remove_images_without_labelfiles(image_dir: str, label_dir: str, percent_background: int):
+    image_path = Path(image_dir).resolve(strict=True)
+    label_path = Path(label_dir).resolve(strict=True)
+
+    total_files = 0
+    filepaths_wo_labels = []
+    for file_path in image_path.glob("*"):
+        if file_path.is_file() and file_path.suffix.lower() in VALID_IMG_EXTENSIONS:
+            total_files += 1
+            this_label_path = label_path / f'{file_path.stem}.txt'
+            if not this_label_path.is_file():
+                filepaths_wo_labels.append(file_path)
+    target_num_backgrounds = total_files * (percent_background / 100)
+    if target_num_backgrounds >= len(filepaths_wo_labels):
+        percent_actual = len(filepaths_wo_labels) / target_num_backgrounds
+        print(
+            f'percent_background is {percent_background}% or {target_num_backgrounds} images. '
+            f'We have {filepaths_wo_labels} so none are removed, percent backgrounds is {percent_actual}'
+        )
+        return total_files
+
+    this_proportion = len(filepaths_wo_labels) / total_files
+    to_remove_proportion = percent_background / this_proportion
+    sample_size = round(len(filepaths_wo_labels) * to_remove_proportion)
+    selected_items = set(random.sample(filepaths_wo_labels, sample_size))
+    remove_items = [v for v in filepaths_wo_labels if v not in selected_items]
+    for r in remove_items:
+        r.unlink()
+    print(f'removed {len(remove_items)} items from {total_files} files to meet {percent_background}% target')
+    return total_files - len(remove_items)

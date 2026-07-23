@@ -26,7 +26,8 @@ from .eval_test_dataset import eval_test_dataset
 from .data import ObjectDetectData
 from .utils import (
     convert_annotation_to_yolo, check_missing_files, generate_split_class_report,
-    resize_imgs_in_dir, filter_small_yolo_annotations, remove_without_annotations
+    resize_imgs_in_dir, filter_small_yolo_annotations,
+    remove_blank_annotations, remove_images_without_labelfiles
 )
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--slice-size', type=int, default=2000,
                         help="image slicing dimensions for SAHI")
     parser.add_argument('--anno-size-gte', type=int, default=50)
+    parser.add_argument('--percent-background', type=int, default=10,
+                        help="This caps the maximum percent background images in sliced dataset")
     parser.add_argument('-itestset', '--include-testset', action='store_true')
     parser.add_argument(
         '--label-platform',
@@ -73,6 +76,8 @@ def get_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.eval_percent < 0 or args.eval_percent > 100:
         raise ValueError(f'args.eval_percent cannot be < 0 or > 100, you entered {args.eval_percent}')
+    if args.percent_background < 0 or args.precent_background > 100:
+        raise ValueError(f'args.precent_background cannot be < 0 or > 100, you entered {args.precent_background}')
     if args.evaluation_only and args.local_train_dataset:
         raise ValueError('args.evaluation_only and args.local_train_dataset at the same time is not valid.')
     return args
@@ -202,6 +207,9 @@ def main(args):
             cls91to80=False,
             save_dir=coco_conv_dir,
             use_segments=True)
+        # convert_coco does not return blank label files, if it does use remove_blank_annotations()
+        remaining_images_count = remove_images_without_labelfiles(
+            slice_dir, sliced_coco_json_dir, args.percent_background)
         split_by_labels_train_val(sliced_coco_json_dir, slice_dir, base_dirs, args.include_testset)
         if not args.omit_fullsize:
             print('including full images along with slices, use --omit-fullsize to not')
@@ -211,8 +219,11 @@ def main(args):
             # but these will be smallar if anno_size_gte * (imgsz setting / slice-size) < anno_size_gte
             filter_small_yolo_annotations(
                 image_dir=resize_dir, label_dir=resize_dir, min_pixel_size=args.anno_size_gte)
-            remaining_images = remove_without_annotations(image_dir=resize_dir, label_dir=resize_dir)
-            if remaining_images >= 6:
+            # remove_blank_annotations first, then remove images gets all with and without labels
+            remove_blank_annotations(resize_dir)
+            remaining_images_count = remove_images_without_labelfiles(
+                resize_dir, resize_dir, args.percent_background)
+            if remaining_images_count >= 6:
                 split_by_labels_train_val(resize_dir, resize_dir, base_dirs, args.include_testset)
 
 
