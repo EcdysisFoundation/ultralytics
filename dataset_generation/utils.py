@@ -658,7 +658,7 @@ def remove_images_without_labelfiles(image_dir: str, label_dir: str, percent_bac
         percent_actual = len(filepaths_wo_labels) / target_num_backgrounds
         print(
             f'percent_background is {percent_background}% or {target_num_backgrounds} images. '
-            f'We have {filepaths_wo_labels} so none are removed, percent backgrounds is {percent_actual}'
+            f'We have {len(filepaths_wo_labels)} so none are removed, percent backgrounds is {percent_actual}'
         )
         return total_files
 
