@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import yaml
 import random
+from math import ceil
 from PIL import Image
 
 from pathlib import Path
@@ -641,33 +642,45 @@ def remove_blank_annotations(label_dir: str):
     return total_files - removed_count
 
 
+def get_list_to_remove(total_item_count: int, sub_items: list, max_percent: float | int):
+    """
+    Determine the proportion of sub_items out of total_item_count and compare to max_percent.
+    Return a random list of items from sub_items that need to be removed to get below max_percent
+    """
+    if not (0 <= max_percent <= 100):
+        raise ValueError(f"max_percent must be between 0 and 100, got {max_percent}")
+    max_prop = max_percent / 100.0
+    curr_len = len(sub_items)
+    k_exact = (curr_len - max_prop * total_item_count) / (1 - max_prop)
+    items_to_remove = max(0, ceil(k_exact))
+    proportion_to_remove = items_to_remove / curr_len
+    sample_size = round(len(sub_items) * proportion_to_remove)
+    return random.sample(sub_items, sample_size)
+
+
 def remove_images_without_labelfiles(image_dir: str, label_dir: str, percent_background: int):
     image_path = Path(image_dir).resolve(strict=True)
     label_path = Path(label_dir).resolve(strict=True)
-
-    total_files = 0
+    total_file_count = 0
     filepaths_wo_labels = []
     for file_path in image_path.glob("*"):
         if file_path.is_file() and file_path.suffix.lower() in VALID_IMG_EXTENSIONS:
-            total_files += 1
+            total_file_count += 1
             this_label_path = label_path / f'{file_path.stem}.txt'
             if not this_label_path.is_file():
                 filepaths_wo_labels.append(file_path)
-    target_num_backgrounds = total_files * (percent_background / 100)
-    if target_num_backgrounds >= len(filepaths_wo_labels):
-        percent_actual = len(filepaths_wo_labels) / target_num_backgrounds
+
+    remove_items = get_list_to_remove(total_file_count, filepaths_wo_labels, percent_background)
+    if not remove_items:
+        percent_actual = len(filepaths_wo_labels) / total_file_count
         print(
-            f'percent_background is {percent_background}% or {target_num_backgrounds} images. '
+            f'percent_background is {percent_background}%'
             f'We have {len(filepaths_wo_labels)} so none are removed, percent backgrounds is {percent_actual}'
         )
-        return total_files
-
-    this_proportion = len(filepaths_wo_labels) / total_files
-    to_remove_proportion = (percent_background / 100) / this_proportion
-    sample_size = round(len(filepaths_wo_labels) * to_remove_proportion)
-    selected_items = set(random.sample(filepaths_wo_labels, sample_size))
-    remove_items = [v for v in filepaths_wo_labels if v not in selected_items]
+        return total_file_count
     for r in remove_items:
         r.unlink()
-    print(f'removed {len(remove_items)} items from {total_files} files to meet {percent_background}% target')
-    return total_files - len(remove_items)
+    print(f'removed {len(remove_items)} items from {total_file_count} files to meet {percent_background}% target')
+    remaining_file_count = total_file_count - len(remove_items)
+    print(f'There are now {remaining_file_count} remaining files')
+    return remaining_file_count
