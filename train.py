@@ -14,7 +14,7 @@ if __name__ == '__main__':
         workers=2,
         device=[0, 1],
         single_cls=True,
-        mask_ratio=2,  # 1=='use full resolution masks', default=4, large effects on memory usage
+        mask_ratio=4,  # 1=='use full resolution masks', default=4, large effects on memory usage
         overlap_mask=False,  # dont merge overlapping objects
         cos_lr=True,  # learning rate decay to Cosine Annealing scheduler for maximum precision
         cls=0.3,  # Lower classification priority (since it's a single class)
@@ -23,7 +23,6 @@ if __name__ == '__main__':
         dfl=2.0,  # Sharpen fine-grained edge regression for fine details
         # end cls offset
         # augmentations
-        degrees=180.0,  # allow any angle
         fliplr=0.5,  # horizontal flip probability
         flipud=0.5,  # vertical flip probability
         mosaic=0.0,  # turn off mosaic augmentation
