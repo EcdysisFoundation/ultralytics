@@ -3,8 +3,10 @@ import argparse
 import numpy as np
 from pathlib import Path
 from PIL import Image
-from skimage.draw import polygon2mask
+
 from sahi.predict import get_sliced_prediction
+from skimage.draw import polygon2mask
+from skimage.morphology import opening, disk
 
 from dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import DETECTION_MODEL
@@ -81,16 +83,10 @@ def object_prediction_to_bbox_mask_local(obj):
     mask_obj = obj.mask
 
     # 1. Read bbox in full-image coords
-    # Adjust these attributes to match SAHI's BoundingBox API in your env [web:69][web:105]
-    xmin = float(mask_obj.segmentation_bbox_minx) if hasattr(mask_obj, "segmentation_bbox_minx") else float(obj.bbox.minx)
-    ymin = float(mask_obj.segmentation_bbox_miny) if hasattr(mask_obj, "segmentation_bbox_miny") else float(obj.bbox.miny)
-    xmax = float(obj.bbox.maxx)
-    ymax = float(obj.bbox.maxy)
-
-    xmin = int(round(xmin))
-    ymin = int(round(ymin))
-    xmax = int(round(xmax))
-    ymax = int(round(ymax))
+    xmin = int(round(float(obj.bbox.minx)))
+    ymin = int(round(float(obj.bbox.miny)))
+    xmax = int(round(float(obj.bbox.maxx)))
+    ymax = int(round(float(obj.bbox.maxy)))
 
     h = ymax - ymin
     w = xmax - xmin
@@ -101,10 +97,20 @@ def object_prediction_to_bbox_mask_local(obj):
     # 3. Rasterize each polygon into bbox-local mask
     for seg_flat in mask_obj.segmentation:
         poly_rc = coco_flat_to_local_rowcol(seg_flat, xmin, ymin)
-        poly_mask = polygon2mask((h, w), poly_rc)  # bool array [web:90][web:91]
+        poly_mask = polygon2mask((h, w), poly_rc)  # bool array
         cropped_mask |= poly_mask
 
     return cropped_mask
+
+
+def open_mask_break_bridges(cropped_mask, radius_px: int):
+    """
+    Apply morphological opening with a disk SE to break thin self-bridges.
+    """
+    selem = disk(radius_px)  # flat disk structuring element
+    opened = opening(cropped_mask, selem)  # erosion then dilation
+    print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
+    return opened
 
 
 def split_self_bridges(obj):
@@ -115,8 +121,9 @@ def split_self_bridges(obj):
         return [obj]  # nothing to see here
 
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
-    print('cropped_mask.__dict__')
-    print(cropped_mask.__dict__)
+    print('cropped_mask.__dir__')
+    print(cropped_mask.__dir__)
+    cropped_mask = open_mask_break_bridges(cropped_mask, 2)
 
 
 def main(args):
