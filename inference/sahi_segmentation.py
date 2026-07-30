@@ -7,7 +7,7 @@ from sahi import AutoDetectionModel
 # SAHI INFERENCE FOR SEGMENTATION
 
 # train-4 used imgsize 640px
-MODEL_PATH = 'runs/segment/train-4/weights/best.pt'
+MODEL_PATH = 'runs/segment/train-12/weights/best.pt'
 
 
 DETECTION_MODEL = AutoDetectionModel.from_pretrained(
@@ -25,10 +25,12 @@ def predict(img_path, save_img_file=False):
         DETECTION_MODEL,
         slice_height=2000,
         slice_width=2000,
-        overlap_height_ratio=0.4,
-        overlap_width_ratio=0.4,
+        overlap_height_ratio=0.3,
+        overlap_width_ratio=0.3,
         postprocess_match_threshold=0.4,
-        perform_standard_pred=True
+        perform_standard_pred=True,
+        postprocess_match_metric='IOS',  # default IOS
+        postprocess_type="GREEDYNMM"  # default GREEDYNMM
     )
     original_width = result.image_width
     original_height = result.image_height
