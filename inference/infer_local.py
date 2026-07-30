@@ -64,9 +64,9 @@ def main(args):
     pred_result = predict(input_file, save_img_file=args.save_img)
 
     # examine object_prediction_list
-    print(coco_result.object_prediction_list[0].__dict__)
+    print(pred_result.object_prediction_list[0].__dict__)
 
-    for obj in coco_result.object_prediction_list:
+    for obj in pred_result.object_prediction_list:
         # masks: often something like obj.mask or obj.mask_numpy
         has_mask = getattr(obj, "mask", None) is not None
 
