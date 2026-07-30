@@ -1,8 +1,9 @@
 import os
 import argparse
+import numpy as np
 from pathlib import Path
 from PIL import Image
-
+from skimage.draw import polygon2mask
 from sahi.predict import get_sliced_prediction
 
 from dataset_generation.utils import convert_coco_to_yolo
@@ -51,6 +52,73 @@ def predict(img_path, save_img_file=False):
     return result
 
 
+def coco_flat_to_local_rowcol(seg_flat, xmin, ymin):
+    """
+    seg_flat: [x1, y1, x2, y2, ...] in full-image pixel coords
+    xmin, ymin: top-left of bbox in full-image coords
+
+    returns: (N, 2) array of (row, col) in bbox-local coords
+    """
+    coords = np.array(seg_flat, dtype=float).reshape(-1, 2)  # (N, 2) [x, y]
+    x_full = coords[:, 0]
+    y_full = coords[:, 1]
+
+    # shift into bbox-local coords
+    x_local = x_full - xmin
+    y_local = y_full - ymin
+
+    # polygon2mask expects (row, col) = (y, x)
+    poly_rc = np.column_stack((y_local, x_local))
+    return poly_rc
+
+
+def object_prediction_to_bbox_mask_local(obj):
+    """
+    Convert a SAHI ObjectPrediction with a Mask.segmentation into a
+    bbox-cropped binary mask (numpy bool array).
+    """
+
+    mask_obj = obj.mask
+
+    # 1. Read bbox in full-image coords
+    # Adjust these attributes to match SAHI's BoundingBox API in your env [web:69][web:105]
+    xmin = float(mask_obj.segmentation_bbox_minx) if hasattr(mask_obj, "segmentation_bbox_minx") else float(obj.bbox.minx)
+    ymin = float(mask_obj.segmentation_bbox_miny) if hasattr(mask_obj, "segmentation_bbox_miny") else float(obj.bbox.miny)
+    xmax = float(obj.bbox.maxx)
+    ymax = float(obj.bbox.maxy)
+
+    xmin = int(round(xmin))
+    ymin = int(round(ymin))
+    xmax = int(round(xmax))
+    ymax = int(round(ymax))
+
+    h = ymax - ymin
+    w = xmax - xmin
+
+    # 2. Initialize bbox-local mask
+    cropped_mask = np.zeros((h, w), dtype=bool)
+
+    # 3. Rasterize each polygon into bbox-local mask
+    for seg_flat in mask_obj.segmentation:
+        poly_rc = coco_flat_to_local_rowcol(seg_flat, xmin, ymin)
+        poly_mask = polygon2mask((h, w), poly_rc)  # bool array [web:90][web:91]
+        cropped_mask |= poly_mask
+
+    return cropped_mask
+
+
+def split_self_bridges(obj):
+    has_mask = getattr(obj, "mask", None) is not None
+    has_bbox = getattr(obj, "bbox", None) is not None
+
+    if not has_mask or not has_bbox:
+        return [obj]  # nothing to see here
+
+    cropped_mask = object_prediction_to_bbox_mask_local(obj)
+    print('cropped_mask.__dict__')
+    print(cropped_mask.__dict__)
+
+
 def main(args):
     input_file = f'{args.top_dir}/{args.input_file}'
     output_file = f'{args.top_dir}/{args.output_file}'
@@ -64,17 +132,14 @@ def main(args):
     pred_result = predict(input_file, save_img_file=args.save_img)
 
     # examine object_prediction_list
-    print(pred_result.object_prediction_list[0].__dict__)
-
-    for obj in pred_result.object_prediction_list:
-        # masks: often something like obj.mask or obj.mask_numpy
-        has_mask = getattr(obj, "mask", None) is not None
-
-        # polygons: SAHI typically stores segmentation as obj.segment or obj.contours
-        has_polygon = getattr(obj, "segment", None) is not None or \
-            getattr(obj, "polygon", None) is not None
-
-        print(obj.category_name, has_mask, has_polygon)
+    first_pred = pred_result.object_prediction_list[0]
+    print('first_pred.__dict__')
+    print(first_pred.__dict__)
+    # {'score': PredictionScore: <value: 0.963079571723938>, 'mask': <sahi.annotation.Mask object at 0x7f475e4e6ad0>, 'bbox': BoundingBox: <(8929, 2833, 10493, 4262), w: 1564, h: 1429>, 'category': Category: <id: 0, name: item>, 'merged': None}
+    print('first_pred.mask.__dict__')
+    print(first_pred.mask.__dict__)
+    # {'shift_x': 0, 'shift_y': 0, 'full_shape_height': 14650, 'full_shape_width': 14700, 'segmentation': [[9059, 3001, 9058, 3001, 9056,...
+    split_self_bridges(first_pred)
 
     original_width = pred_result.image_width
     original_height = pred_result.image_height
@@ -102,6 +167,7 @@ def main(args):
 
 
 if __name__ == '__main__':
+
     args = get_args()
 
     # avoid DecompressionBombError
@@ -112,3 +178,13 @@ if __name__ == '__main__':
         print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
     main(args)
+
+"""
+example:
+
+python -m inference.infer_local \
+--input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
+--output-file cvat-tasks/texas_oklahoma_2025c_rerun/4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
+--save-img
+
+"""
