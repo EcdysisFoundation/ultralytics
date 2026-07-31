@@ -37,10 +37,10 @@ def predict(img_path, save_img_file=False):
     result = get_sliced_prediction(
         img_path,
         DETECTION_MODEL,
-        slice_height=6000,
-        slice_width=6000,
-        overlap_height_ratio=0.2,
-        overlap_width_ratio=0.2,
+        slice_height=2000,
+        slice_width=2000,
+        overlap_height_ratio=0.3,
+        overlap_width_ratio=0.3,
         postprocess_match_threshold=0.4,
         perform_standard_pred=True,
         postprocess_match_metric='IOS',  # default IOS
