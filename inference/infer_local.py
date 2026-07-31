@@ -5,9 +5,10 @@ from pathlib import Path
 from PIL import Image
 
 from sahi.predict import get_sliced_prediction
+from shapely.geometry import Polygon
 from skimage.draw import polygon2mask
 from skimage.morphology import opening, disk
-from skimage.measure import label
+from skimage.measure import label, find_contours
 
 from dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import DETECTION_MODEL
@@ -123,6 +124,30 @@ def label_components(opened_mask):
     return labeled, num_labels
 
 
+def component_label_to_polygons(labeled, k):
+    """
+    labeled: int array of labels
+    k: component label (1..num_labels)
+    returns: list of shapely Polygons in bbox-local coords
+    """
+    component_mask = (labeled == k)
+
+    # find_contours expects float image; coords are (row, col)
+    contours = find_contours(component_mask.astype(float), level=0.5)
+
+    polys = []
+    for contour in contours:
+        # contour[:, 0] = row (y), contour[:, 1] = col (x)
+        y = contour[:, 0]
+        x = contour[:, 1]
+        coords = np.column_stack((x, y))  # shapely expects (x, y)
+        poly = Polygon(coords)
+        if poly.area > 0:
+            polys.append(poly)
+
+    return polys
+
+
 def split_self_bridges(obj):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
@@ -136,6 +161,9 @@ def split_self_bridges(obj):
     opened = open_mask_break_bridges(cropped_mask, 2)
     print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
     labeled, num_labels = label_components(opened)
+    if num_labels > 1:
+        polys = component_label_to_polygons(labeled, num_labels)
+        print(polys)
     print("num_labels:", num_labels)
 
 
@@ -163,7 +191,7 @@ def main(args):
         split_self_bridges(pred)
 
         # temp stop early
-        if i >= 10:
+        if i >= 2:
             break
 
     original_width = pred_result.image_width
@@ -209,7 +237,6 @@ example:
 
 python -m inference.infer_local \
 --input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
---output-file cvat-tasks/texas_oklahoma_2025c_rerun/4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
---save-img
+--output-file cvat-tasks/texas_oklahoma_2025c_rerun/4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
 
 """
