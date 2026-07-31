@@ -7,6 +7,7 @@ from PIL import Image
 from sahi.predict import get_sliced_prediction
 from sahi.prediction import ObjectPrediction
 from shapely.geometry import Polygon
+from shapely.validation import make_valid
 from skimage.draw import polygon2mask
 from skimage.morphology import opening, disk
 from skimage.measure import label, find_contours
@@ -143,9 +144,36 @@ def component_label_to_polygons(labeled, k):
         y = contour[:, 0]
         x = contour[:, 1]
         coords = np.column_stack((x, y))  # shapely expects (x, y)
-        poly = Polygon(coords)
-        if poly.area > 0:
-            polys.append(poly)
+        # Skip degenerate contours with too few points
+        if coords.shape[0] < 3:
+            continue
+
+        try:
+            poly = Polygon(coords)
+        except Exception as e:
+            print(f"Skipping contour for label {k}: Polygon error {e}")
+            continue
+
+        # more filters and coersion
+        if poly.area <= 0:
+            continue
+
+        if not poly.is_valid:
+            poly = make_valid(poly)  # may return MultiPolygon/GeometryCollection [web:147][web:144]
+            # From make_valid, extract polygon parts
+            if poly.is_empty:
+                continue
+
+            # Flatten MultiPolygon/GeometryCollection to Polygons
+            if poly.geom_type == "Polygon":
+                polys.append(poly)
+            else:
+                for g in poly.geoms:
+                    if g.geom_type == "Polygon" and g.area > 0:
+                        polys.append(g)
+            continue
+
+        polys.append(poly)
 
     return polys
 
