@@ -7,6 +7,7 @@ from PIL import Image
 from sahi.predict import get_sliced_prediction
 from skimage.draw import polygon2mask
 from skimage.morphology import opening, disk
+from skimage.measure import label
 
 from dataset_generation.utils import convert_coco_to_yolo
 from .sahi_segmentation import DETECTION_MODEL
@@ -109,8 +110,17 @@ def open_mask_break_bridges(cropped_mask, radius_px: int):
     """
     selem = disk(radius_px)  # flat disk structuring element
     opened = opening(cropped_mask, selem)  # erosion then dilation
-    print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
     return opened
+
+
+def label_components(opened_mask):
+    """
+    Label connected components in a binary mask.
+    Returns labeled image and number of labels.
+    """
+    labeled = label(opened_mask, connectivity=1)  # 4-connectivity in 2D
+    num_labels = labeled.max()
+    return labeled, num_labels
 
 
 def split_self_bridges(obj):
@@ -123,7 +133,10 @@ def split_self_bridges(obj):
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
     print('cropped_mask.__dir__')
     print(cropped_mask.__dir__)
-    cropped_mask = open_mask_break_bridges(cropped_mask, 2)
+    opened = open_mask_break_bridges(cropped_mask, 2)
+    print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
+    labeled, num_labels = label_components(opened)
+    print("num_labels:", num_labels)
 
 
 def main(args):
@@ -139,14 +152,19 @@ def main(args):
     pred_result = predict(input_file, save_img_file=args.save_img)
 
     # examine object_prediction_list
-    first_pred = pred_result.object_prediction_list[0]
-    print('first_pred.__dict__')
-    print(first_pred.__dict__)
-    # {'score': PredictionScore: <value: 0.963079571723938>, 'mask': <sahi.annotation.Mask object at 0x7f475e4e6ad0>, 'bbox': BoundingBox: <(8929, 2833, 10493, 4262), w: 1564, h: 1429>, 'category': Category: <id: 0, name: item>, 'merged': None}
-    print('first_pred.mask.__dict__')
-    print(first_pred.mask.__dict__)
-    # {'shift_x': 0, 'shift_y': 0, 'full_shape_height': 14650, 'full_shape_width': 14700, 'segmentation': [[9059, 3001, 9058, 3001, 9056,...
-    split_self_bridges(first_pred)
+
+    for i, pred in enumerate(pred_result.object_prediction_list):
+
+        # pred == {'score': PredictionScore: <value: ...>, 'mask': <sahi.annotation.Mask object at ...>, 'bbox': BoundingBox: <(..., ..., ..., ...), w: ..., h: ...>, 'category': Category: <id: ..., name: item>, 'merged': None}
+
+        # print(pred.mask.__dict__)
+        # {'shift_x': 0, 'shift_y': 0, 'full_shape_height': ..., 'full_shape_width': ..., 'segmentation': [[..., ...
+
+        split_self_bridges(pred)
+
+        # temp stop early
+        if i >= 10:
+            break
 
     original_width = pred_result.image_width
     original_height = pred_result.image_height
