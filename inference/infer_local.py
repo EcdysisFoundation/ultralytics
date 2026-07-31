@@ -132,6 +132,7 @@ def component_label_to_polygons(labeled, k):
     returns: list of shapely Polygons in bbox-local coords
     """
     component_mask = (labeled == k)
+    print(f"label {k}: component_mask sum:", component_mask.sum())
 
     # find_contours expects float image; coords are (row, col)
     contours = find_contours(component_mask.astype(float), level=0.5)
@@ -178,6 +179,27 @@ def component_label_to_coco_segments(labeled, k, xmin, ymin):
     return segments  # list of flat segmentations
 
 
+def segments_to_bbox(segments):
+    """
+    segments: list of flat [x1, y1, x2, y2, ...] lists (COCO style)
+    returns: [xmin, ymin, xmax, ymax]
+    """
+    all_xy = []
+    for seg in segments:
+        coords = np.array(seg, dtype=float).reshape(-1, 2)
+        all_xy.append(coords)
+    if not all_xy:
+        return None
+    all_xy = np.vstack(all_xy)
+    xs = all_xy[:, 0]
+    ys = all_xy[:, 1]
+    xmin = xs.min()
+    ymin = ys.min()
+    xmax = xs.max()
+    ymax = ys.max()
+    return [xmin, ymin, xmax, ymax]
+
+
 def split_self_bridges(obj):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
@@ -206,8 +228,10 @@ def split_self_bridges(obj):
         if not segments:
             continue
 
+        bbox = segments_to_bbox(segments)
+        print(f'bbox: {bbox}')
         new_obj = ObjectPrediction(
-            bbox=None,  # let SAHI infer from segmentation
+            bbox=bbox,
             category_id=obj.category.id,
             category_name=obj.category.name,
             score=float(obj.score.value),
@@ -221,8 +245,8 @@ def split_self_bridges(obj):
     print(len(new_objects))
     for new_object in new_objects:
         print('bbox and full_shape_height')
-        print(new_obj.bbox)
-        print(new_obj.mask.full_shape_height)
+        print(new_object.bbox)
+        print(new_object.mask.full_shape_height)
 
     return new_objects or [obj]
 
