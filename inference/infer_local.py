@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 from sahi.predict import get_sliced_prediction
+from sahi.prediction import ObjectPrediction
 from shapely.geometry import Polygon
 from skimage.draw import polygon2mask
 from skimage.morphology import opening, disk
@@ -148,6 +149,35 @@ def component_label_to_polygons(labeled, k):
     return polys
 
 
+def polygon_to_coco_segmentation(poly, xmin, ymin):
+    """
+    poly: shapely Polygon in bbox-local coords
+    xmin, ymin: bbox top-left in full-image coords
+
+    returns: flat COCO segmentation list [x1, y1, x2, y2, ...] in full-image coords
+    """
+    # Use exterior ring only; ignore holes for now
+    x_local, y_local = poly.exterior.xy  # sequences of x, y
+    x_local = np.array(x_local)
+    y_local = np.array(y_local)
+
+    x_full = x_local + xmin
+    y_full = y_local + ymin
+
+    # Interleave as [x1, y1, x2, y2, ...]
+    seg = np.column_stack((x_full, y_full)).reshape(-1)
+    return seg.tolist()
+
+
+def component_label_to_coco_segments(labeled, k, xmin, ymin):
+    polys = component_label_to_polygons(labeled, k)
+    segments = []
+    for poly in polys:
+        seg = polygon_to_coco_segmentation(poly, xmin, ymin)
+        segments.append(seg)
+    return segments  # list of flat segmentations
+
+
 def split_self_bridges(obj):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
@@ -155,16 +185,46 @@ def split_self_bridges(obj):
     if not has_mask or not has_bbox:
         return [obj]  # nothing to see here
 
+    xmin = int(round(float(obj.bbox.minx)))
+    ymin = int(round(float(obj.bbox.miny)))
+    # xmax = int(round(float(obj.bbox.maxx)))
+    # ymax = int(round(float(obj.bbox.maxy)))
+
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
-    print('cropped_mask.__dir__')
-    print(cropped_mask.__dir__)
     opened = open_mask_break_bridges(cropped_mask, 2)
-    print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
     labeled, num_labels = label_components(opened)
-    if num_labels > 1:
-        polys = component_label_to_polygons(labeled, num_labels)
-        print(polys)
+
+    print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
     print("num_labels:", num_labels)
+
+    if num_labels <= 1:
+        return [obj]
+
+    new_objects = []
+    for k in range(1, num_labels + 1):
+        segments = component_label_to_coco_segments(labeled, k, xmin, ymin)
+        if not segments:
+            continue
+
+        new_obj = ObjectPrediction(
+            bbox=None,  # let SAHI infer from segmentation
+            category_id=obj.category.id,
+            category_name=obj.category.name,
+            score=float(obj.score.value),
+            segmentation=segments,
+            shift_amount=[0, 0],
+            full_shape=[obj.mask.full_shape_height, obj.mask.full_shape_width],
+        )
+
+        new_objects.append(new_obj)
+    print('made new_objects')
+    print(len(new_objects))
+    for new_object in new_objects:
+        print('bbox and full_shape_height')
+        print(new_obj.bbox)
+        print(new_obj.mask.full_shape_height)
+
+    return new_objects or [obj]
 
 
 def main(args):
@@ -178,8 +238,6 @@ def main(args):
 
     print(f'performing inference on {input_file}')
     pred_result = predict(input_file, save_img_file=args.save_img)
-
-    # examine object_prediction_list
 
     for i, pred in enumerate(pred_result.object_prediction_list):
 
