@@ -200,7 +200,7 @@ def segments_to_bbox(segments):
     return [xmin, ymin, xmax, ymax]
 
 
-def split_self_bridges(obj):
+def split_self_bridges(obj, open_radius_px: int):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
 
@@ -213,7 +213,7 @@ def split_self_bridges(obj):
     # ymax = int(round(float(obj.bbox.maxy)))
 
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
-    opened = open_mask_break_bridges(cropped_mask, 2)
+    opened = open_mask_break_bridges(cropped_mask, open_radius_px)
     labeled, num_labels = label_components(opened)
 
     print("original sum:", cropped_mask.sum(), "opened sum:", opened.sum())
@@ -251,6 +251,19 @@ def split_self_bridges(obj):
     return new_objects or [obj]
 
 
+def apply_bridge_splitting(pred_result, open_radius_px: int):
+    """
+    Replace each ObjectPrediction in pred_result.object_prediction_list
+    with the objects returned by split_self_bridges.
+    """
+    new_object_predictions = []
+    for obj in pred_result.object_prediction_list:
+        split_objs = split_self_bridges(obj, open_radius_px=open_radius_px)
+        new_object_predictions.extend(split_objs)
+
+    pred_result.object_prediction_list = new_object_predictions
+
+
 def main(args):
     input_file = f'{args.top_dir}/{args.input_file}'
     output_file = f'{args.top_dir}/{args.output_file}'
@@ -263,18 +276,10 @@ def main(args):
     print(f'performing inference on {input_file}')
     pred_result = predict(input_file, save_img_file=args.save_img)
 
-    for i, pred in enumerate(pred_result.object_prediction_list):
-
-        # pred == {'score': PredictionScore: <value: ...>, 'mask': <sahi.annotation.Mask object at ...>, 'bbox': BoundingBox: <(..., ..., ..., ...), w: ..., h: ...>, 'category': Category: <id: ..., name: item>, 'merged': None}
-
-        # print(pred.mask.__dict__)
-        # {'shift_x': 0, 'shift_y': 0, 'full_shape_height': ..., 'full_shape_width': ..., 'segmentation': [[..., ...
-
-        split_self_bridges(pred)
-
-        # temp stop early
-        if i >= 2:
-            break
+    # Apply bridge splitting to all predictions before COCO conversion
+    print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
+    apply_bridge_splitting(pred_result, open_radius_px=2)
+    print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
 
     original_width = pred_result.image_width
     original_height = pred_result.image_height
