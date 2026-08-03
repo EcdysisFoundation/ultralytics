@@ -32,6 +32,9 @@ def get_args() -> argparse.Namespace:
                         help='save the inference img example locally')
     parser.add_argument('--apply-bridge-splitting', action='store_true',
                         help='apply morphology bridge splitting')
+    parser.add_argument('--open-radius-px', type=int,
+                        default=1,
+                        help='number of pixels for morphology opening, disk')
     parser.add_argument('--anno-size-gte', type=int, default=50)
     args = parser.parse_args()
     return args
@@ -358,6 +361,10 @@ example:
 
 python -m inference.infer_local \
 --input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
---output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
+--output-dir cvat-tasks/4124_sw_T2_wopening \
+--apply-bridge-splitting \
+--open-radius-px 1
+
 
 """
