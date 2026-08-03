@@ -24,9 +24,14 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--input-file', type=str,
                         help='the subpath to the input file')
     parser.add_argument('--output-file', type=str,
-                        help='the subpath to put the output file')
+                        help='the name of the output file')
+    parser.add_argument('--output-dir', type=str,
+                        default='cvat-tasks/infer-local',
+                        help='the subpath dir to put the output file')
     parser.add_argument('--save-img', action='store_true',
                         help='save the inference img example locally')
+    parser.add_argument('--apply-bridge-splitting', action='store_true',
+                        help='apply morphology bridge splitting')
     parser.add_argument('--anno-size-gte', type=int, default=50)
     args = parser.parse_args()
     return args
@@ -39,8 +44,8 @@ def predict(img_path, save_img_file=False):
         DETECTION_MODEL,
         slice_height=2000,
         slice_width=2000,
-        overlap_height_ratio=0.3,
-        overlap_width_ratio=0.3,
+        overlap_height_ratio=0.4,
+        overlap_width_ratio=0.4,
         postprocess_match_threshold=0.4,
         perform_standard_pred=True,
         postprocess_match_metric='IOS',  # default IOS
@@ -294,7 +299,7 @@ def apply_bridge_splitting(pred_result, open_radius_px: int):
 
 def main(args):
     input_file = f'{args.top_dir}/{args.input_file}'
-    output_file = f'{args.top_dir}/{args.output_file}'
+    output_file = f'{args.top_dir}/{args.output_dir}/{args.output_file}'
     if not os.path.exists(input_file):
         f'File not found: {input_file}'
         return
@@ -305,9 +310,10 @@ def main(args):
     pred_result = predict(input_file, save_img_file=args.save_img)
 
     # Apply bridge splitting to all predictions before COCO conversion
-    print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
-    apply_bridge_splitting(pred_result, open_radius_px=2)
-    print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
+    if args.apply_bridge_splitting:
+        print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
+        apply_bridge_splitting(pred_result, open_radius_px=2)
+        print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
 
     original_width = pred_result.image_width
     original_height = pred_result.image_height
@@ -352,6 +358,6 @@ example:
 
 python -m inference.infer_local \
 --input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
---output-file cvat-tasks/texas_oklahoma_2025c_rerun/4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
 
 """

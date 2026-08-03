@@ -26,9 +26,4 @@ if __name__ == '__main__':
         fliplr=0.5,  # horizontal flip probability
         flipud=0.5,  # vertical flip probability
         mosaic=0.0,  # turn off mosaic augmentation
-        # try these agumentation for debris and glare
-        # erasing=0.4,  # random small patch
-        # scale=0.3,  # random zoom in and out
-        # hsv_v=0.3,  # adjust brightness
-        # hsv_s=0.3  # adjust saturation
     )

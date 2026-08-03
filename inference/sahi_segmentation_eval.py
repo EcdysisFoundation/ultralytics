@@ -43,14 +43,11 @@ def predict_and_stream(images_root, output_dir, save_img_file, img_entry, total_
         batch_size=2,
         overlap_height_ratio=0.4,  # default 0.2
         overlap_width_ratio=0.4,  # default 0.2
+        postprocess_match_threshold=0.4,  # default 0.5
         perform_standard_pred=True,
         postprocess_match_metric='IOS',  # default IOS
-        postprocess_match_threshold=0.3,  # default 0.5
         postprocess_type="GREEDYNMM"  # default GREEDYNMM
     )
-
-    # try removing object connecting lines post inference using ...
-    # result = split_objects_to_distinct(result)
 
     # Convert to COCO format using the INTEGER ID from the GT
     coco_predictions = result.to_coco_predictions(image_id=image_id)

@@ -7,7 +7,7 @@ from sahi import AutoDetectionModel
 # SAHI INFERENCE FOR SEGMENTATION
 
 # train-4 used imgsize 640px
-MODEL_PATH = 'runs/segment/train-12/weights/best.pt'
+MODEL_PATH = 'runs/segment/train-14/weights/best.pt'
 
 
 DETECTION_MODEL = AutoDetectionModel.from_pretrained(
