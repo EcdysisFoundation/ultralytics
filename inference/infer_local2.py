@@ -165,12 +165,9 @@ def apply_bridge_splitting(pred_result, min_size_px: int):
 
 def main(args):
     input_file = f'{args.top_dir}/{args.input_file}'
-    output_file = f'{args.top_dir}/{args.output_dir}/{args.output_file}'
     if not os.path.exists(input_file):
         f'File not found: {input_file}'
         return
-    if not os.path.exists(output_file):
-        Path(output_file).touch()
 
     print(f'performing inference on {input_file}')
     pred_result = predict(input_file, save_img_file=args.save_img)
@@ -196,10 +193,8 @@ if __name__ == '__main__':
 """
 example:
 
-python -m inference.infer_local \
+python -m inference.infer_local2 \
 --input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
---output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
---output-dir cvat-tasks/4124_sw_T2_wopening \
---apply-bridge-splitting
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
 
 """
