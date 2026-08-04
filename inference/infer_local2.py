@@ -128,30 +128,198 @@ def coco_flat_to_local_rowcol(seg_flat, xmin, ymin):
     return poly_rc
 
 
+def polygon_to_coco_segmentation(poly, xmin, ymin):
+    """
+    poly: shapely Polygon in bbox-local coords
+    xmin, ymin: bbox top-left in full-image coords
+
+    returns: flat COCO segmentation list [x1, y1, x2, y2, ...] in full-image coords
+    """
+    # Use exterior ring only; ignore holes for now
+    x_local, y_local = poly.exterior.xy  # sequences of x, y
+    x_local = np.array(x_local)
+    y_local = np.array(y_local)
+
+    x_full = x_local + xmin
+    y_full = y_local + ymin
+
+    # Interleave as [x1, y1, x2, y2, ...]
+    seg = np.column_stack((x_full, y_full)).reshape(-1)
+    return seg.tolist()
+
+
+def cleaned_polygons_to_segments(polys, xmin, ymin):
+    segments = []
+    for poly in polys:
+        seg = polygon_to_coco_segmentation(poly, xmin, ymin)
+        segments.append(seg)
+    return segments
+
+
+def label_cleaned_components(cleaned_mask):
+    labeled = label(cleaned_mask, connectivity=1)
+    num_labels = labeled.max()
+    return labeled, num_labels
+
+
+def cleaned_mask_to_polygons(cleaned_mask):
+    """
+    cleaned_mask: bool array in bbox-local coords
+    returns: list of shapely Polygons in bbox-local coords
+    """
+    contours = find_contours(cleaned_mask.astype(float), level=0.5)
+
+    polys = []
+    for contour in contours:
+        y = contour[:, 0]
+        x = contour[:, 1]
+        coords = np.column_stack((x, y))  # (x, y) for shapely
+
+        if coords.shape[0] < 3:
+            continue
+
+        try:
+            poly = Polygon(coords)
+        except Exception as e:
+            print(f"Skipping contour: Polygon error {e}")
+            continue
+
+        if poly.area <= 0:
+            continue
+
+        # Optional: fix invalid polygons more conservatively
+        if not poly.is_valid:
+            poly = make_valid(poly)
+            if poly.is_empty:
+                continue
+            if poly.geom_type == "Polygon":
+                polys.append(poly)
+            else:
+                for g in poly.geoms:
+                    if g.geom_type == "Polygon" and g.area > 0:
+                        polys.append(g)
+            continue
+
+        polys.append(poly)
+
+    return polys
+
+
+def cleaned_component_to_segments(labeled_cleaned, k, xmin, ymin):
+    polys = cleaned_component_to_polygons(labeled_cleaned, k)
+    segments = []
+    for poly in polys:
+        seg = polygon_to_coco_segmentation(poly, xmin, ymin)
+        segments.append(seg)
+    return segments
+
+
+def cleaned_component_to_polygons(labeled_cleaned, k):
+    component_mask = (labeled_cleaned == k)
+    contours = find_contours(component_mask.astype(float), level=0.5)
+
+    polys = []
+    for contour in contours:
+        y = contour[:, 0]
+        x = contour[:, 1]
+        coords = np.column_stack((x, y))  # (x, y) for shapely
+
+        if coords.shape[0] < 3:
+            continue
+
+        try:
+            poly = Polygon(coords)
+        except Exception as e:
+            print(f"Skipping contour for label {k}: Polygon error {e}")
+            continue
+
+        if poly.area <= 0:
+            continue
+
+        if not poly.is_valid:
+            poly = make_valid(poly)
+            if poly.is_empty:
+                continue
+            if poly.geom_type == "Polygon":
+                polys.append(poly)
+            else:
+                for g in poly.geoms:
+                    if g.geom_type == "Polygon" and g.area > 0:
+                        polys.append(g)
+            continue
+
+        polys.append(poly)
+
+    return polys
+
+
+def segments_to_bbox(segments):
+    """
+    segments: list of flat [x1, y1, x2, y2, ...] lists (COCO style)
+    returns: [xmin, ymin, xmax, ymax]
+    """
+    all_xy = []
+    for seg in segments:
+        coords = np.array(seg, dtype=float).reshape(-1, 2)
+        all_xy.append(coords)
+    if not all_xy:
+        return None
+    all_xy = np.vstack(all_xy)
+    xs = all_xy[:, 0]
+    ys = all_xy[:, 1]
+    xmin = xs.min()
+    ymin = ys.min()
+    xmax = xs.max()
+    ymax = ys.max()
+    return [xmin, ymin, xmax, ymax]
+
+
+def split_cleaned_components_to_objects(obj, cleaned_mask):
+    xmin = int(round(float(obj.bbox.minx)))
+    ymin = int(round(float(obj.bbox.miny)))
+
+    labeled_cleaned, num_labels_cleaned = label_cleaned_components(cleaned_mask)
+    print("num_labels_cleaned:", num_labels_cleaned)
+
+    new_objects = []
+
+    for k in range(1, num_labels_cleaned + 1):
+        segments = cleaned_component_to_segments(labeled_cleaned, k, xmin, ymin)
+        if not segments:
+            continue
+
+        bbox = segments_to_bbox(segments)
+
+        new_obj = ObjectPrediction(
+            bbox=bbox,
+            category_id=obj.category.id,
+            category_name=obj.category.name,
+            score=float(obj.score.value),
+            segmentation=segments,
+            shift_amount=[0, 0],
+            full_shape=[obj.mask.full_shape_height, obj.mask.full_shape_width],
+        )
+        new_objects.append(new_obj)
+
+    return new_objects or [obj]
+
+
 def split_self_bridges_remove_small(obj, min_size_px: int):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
     if not has_mask or not has_bbox:
         return [obj]
 
-    # 1. Build cropped_mask
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
-
-    # 2. Label original mask
     labeled_orig, num_labels = label_original_components(cropped_mask)
     if num_labels <= 1:
         return [obj]
 
-    # 3. Remove small attachments
     cleaned_mask = remove_small_attachments(labeled_orig, min_size_px)
-
     print("num_labels:", num_labels)
     print("original sum:", cropped_mask.sum(), "cleaned sum:", cleaned_mask.sum())
 
-    # 4. For now, keep original object prediction as-is.
-    # You have cleaned_mask if you later want to rebuild polygons, but we *don’t* use it yet
-    # so the insect’s polygon remains untouched.
-    return [obj]
+    return split_cleaned_components_to_objects(obj, cleaned_mask)
 
 
 def apply_bridge_splitting(pred_result, min_size_px: int):
@@ -165,16 +333,44 @@ def apply_bridge_splitting(pred_result, min_size_px: int):
 
 def main(args):
     input_file = f'{args.top_dir}/{args.input_file}'
+    output_file = f'{args.top_dir}/{args.output_dir}/{args.output_file}'
     if not os.path.exists(input_file):
         f'File not found: {input_file}'
         return
+    if not os.path.exists(output_file):
+        Path(output_file).touch()
 
     print(f'performing inference on {input_file}')
     pred_result = predict(input_file, save_img_file=args.save_img)
 
-    print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
-    pred_result = apply_bridge_splitting(pred_result, min_size_px=625)
-    print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
+    if args.apply_bridge_splitting:
+        print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
+        pred_result = apply_bridge_splitting(pred_result, min_size_px=625)
+        print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
+
+    original_width = pred_result.image_width
+    original_height = pred_result.image_height
+    coco_result = pred_result.to_coco_predictions(
+        image_id=os.path.basename(input_file))
+
+    # filters
+    print(f'{len(coco_result)} annotations before filtering')
+    # filter missing bbox
+    coco_result = [v for v in coco_result if v['bbox']]
+    print(f'{len(coco_result)} after filtering missing box')
+    # filter based on bbox size
+    coco_result = [
+        v for v in coco_result if v['bbox'][2] >= args.anno_size_gte or v['bbox'][3] >= args.anno_size_gte
+    ]
+    print(f'{len(coco_result)} after filtering small boxes')
+
+    yolo_annotations = convert_coco_to_yolo(coco_result, original_width, original_height)
+    # write segmentation label file
+    with open(output_file, mode="w", encoding="utf-8") as file:
+        for i, cat in enumerate(yolo_annotations['classificaions']):
+            polygon = yolo_annotations['segments'][i]
+            if polygon:
+                file.write(f"{cat} {' '.join(str(v) for v in polygon)}\n")
 
 
 if __name__ == '__main__':
