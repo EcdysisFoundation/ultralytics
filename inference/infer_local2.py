@@ -6,10 +6,8 @@ from PIL import Image
 
 from sahi.predict import get_sliced_prediction
 from sahi.prediction import ObjectPrediction
-from shapely.geometry import Polygon
-from shapely.validation import make_valid
 from skimage.draw import polygon2mask
-from skimage.morphology import opening, disk, remove_small_objects
+from skimage.morphology import remove_small_objects
 from skimage.measure import label, find_contours
 
 from dataset_generation.utils import convert_coco_to_yolo
@@ -128,129 +126,36 @@ def coco_flat_to_local_rowcol(seg_flat, xmin, ymin):
     return poly_rc
 
 
-def polygon_to_coco_segmentation(poly, xmin, ymin):
-    """
-    poly: shapely Polygon in bbox-local coords
-    xmin, ymin: bbox top-left in full-image coords
-
-    returns: flat COCO segmentation list [x1, y1, x2, y2, ...] in full-image coords
-    """
-    # Use exterior ring only; ignore holes for now
-    x_local, y_local = poly.exterior.xy  # sequences of x, y
-    x_local = np.array(x_local)
-    y_local = np.array(y_local)
-
-    x_full = x_local + xmin
-    y_full = y_local + ymin
-
-    # Interleave as [x1, y1, x2, y2, ...]
-    seg = np.column_stack((x_full, y_full)).reshape(-1)
-    return seg.tolist()
-
-
-def cleaned_polygons_to_segments(polys, xmin, ymin):
-    segments = []
-    for poly in polys:
-        seg = polygon_to_coco_segmentation(poly, xmin, ymin)
-        segments.append(seg)
-    return segments
-
-
 def label_cleaned_components(cleaned_mask):
     labeled = label(cleaned_mask, connectivity=1)
     num_labels = labeled.max()
     return labeled, num_labels
 
 
-def cleaned_mask_to_polygons(cleaned_mask):
+def contour_to_coco_segmentation(contour, xmin, ymin):
     """
-    cleaned_mask: bool array in bbox-local coords
-    returns: list of shapely Polygons in bbox-local coords
+    contour: array (N, 2) in (row, col) from find_contours
+    returns: flat [x1, y1, ..., xn, yn] in full-image coords
     """
-    contours = find_contours(cleaned_mask.astype(float), level=0.5)
+    y = contour[:, 0]
+    x = contour[:, 1]
 
-    polys = []
-    for contour in contours:
-        y = contour[:, 0]
-        x = contour[:, 1]
-        coords = np.column_stack((x, y))  # (x, y) for shapely
+    x_full = x + xmin
+    y_full = y + ymin
 
-        if coords.shape[0] < 3:
-            continue
-
-        try:
-            poly = Polygon(coords)
-        except Exception as e:
-            print(f"Skipping contour: Polygon error {e}")
-            continue
-
-        if poly.area <= 0:
-            continue
-
-        # Optional: fix invalid polygons more conservatively
-        if not poly.is_valid:
-            poly = make_valid(poly)
-            if poly.is_empty:
-                continue
-            if poly.geom_type == "Polygon":
-                polys.append(poly)
-            else:
-                for g in poly.geoms:
-                    if g.geom_type == "Polygon" and g.area > 0:
-                        polys.append(g)
-            continue
-
-        polys.append(poly)
-
-    return polys
+    seg = np.column_stack((x_full, y_full)).reshape(-1)
+    return seg.tolist()
 
 
-def cleaned_component_to_segments(labeled_cleaned, k, xmin, ymin):
-    polys = cleaned_component_to_polygons(labeled_cleaned, k)
+def cleaned_mask_to_segments_no_shapely(cleaned_mask, xmin, ymin):
     segments = []
-    for poly in polys:
-        seg = polygon_to_coco_segmentation(poly, xmin, ymin)
+    contours = find_contours(cleaned_mask.astype(float), level=0.5)
+    for contour in contours:
+        if contour.shape[0] < 3:
+            continue
+        seg = contour_to_coco_segmentation(contour, xmin, ymin)
         segments.append(seg)
     return segments
-
-
-def cleaned_component_to_polygons(labeled_cleaned, k):
-    component_mask = (labeled_cleaned == k)
-    contours = find_contours(component_mask.astype(float), level=0.5)
-
-    polys = []
-    for contour in contours:
-        y = contour[:, 0]
-        x = contour[:, 1]
-        coords = np.column_stack((x, y))  # (x, y) for shapely
-
-        if coords.shape[0] < 3:
-            continue
-
-        try:
-            poly = Polygon(coords)
-        except Exception as e:
-            print(f"Skipping contour for label {k}: Polygon error {e}")
-            continue
-
-        if poly.area <= 0:
-            continue
-
-        if not poly.is_valid:
-            poly = make_valid(poly)
-            if poly.is_empty:
-                continue
-            if poly.geom_type == "Polygon":
-                polys.append(poly)
-            else:
-                for g in poly.geoms:
-                    if g.geom_type == "Polygon" and g.area > 0:
-                        polys.append(g)
-            continue
-
-        polys.append(poly)
-
-    return polys
 
 
 def segments_to_bbox(segments):
@@ -284,7 +189,12 @@ def split_cleaned_components_to_objects(obj, cleaned_mask):
     new_objects = []
 
     for k in range(1, num_labels_cleaned + 1):
-        segments = cleaned_component_to_segments(labeled_cleaned, k, xmin, ymin)
+
+        component_mask = (labeled_cleaned == k)
+        if component_mask.sum() == 0:
+            continue
+
+        segments = cleaned_mask_to_segments_no_shapely(component_mask, xmin, ymin)
         if not segments:
             continue
 
@@ -353,17 +263,6 @@ def main(args):
     coco_result = pred_result.to_coco_predictions(
         image_id=os.path.basename(input_file))
 
-    # filters
-    print(f'{len(coco_result)} annotations before filtering')
-    # filter missing bbox
-    coco_result = [v for v in coco_result if v['bbox']]
-    print(f'{len(coco_result)} after filtering missing box')
-    # filter based on bbox size
-    coco_result = [
-        v for v in coco_result if v['bbox'][2] >= args.anno_size_gte or v['bbox'][3] >= args.anno_size_gte
-    ]
-    print(f'{len(coco_result)} after filtering small boxes')
-
     yolo_annotations = convert_coco_to_yolo(coco_result, original_width, original_height)
     # write segmentation label file
     with open(output_file, mode="w", encoding="utf-8") as file:
@@ -391,6 +290,8 @@ example:
 
 python -m inference.infer_local2 \
 --input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
---output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
+--output-dir cvat-tasks/4124_sw_T2_debridge \
+--apply-bridge-splitting
 
 """
