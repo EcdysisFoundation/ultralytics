@@ -106,10 +106,7 @@ def cleaned_mask_to_segments_cv2(cleaned_mask, xmin, ymin):
         if len(contour) < 3:
             continue
 
-        # Shift bbox-local coordinates back to full image coordinates
         contour_full = contour.astype(float)
-        contour_full[:, 0] += xmin  # x coordinates
-        contour_full[:, 1] += ymin  # y coordinates
 
         segments.append(contour_full.ravel().tolist())
 
