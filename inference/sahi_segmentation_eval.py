@@ -33,16 +33,20 @@ def predict_and_stream(images_root, output_dir, save_img_file, img_entry, total_
     img_path = os.path.join(images_root, file_name)
 
     # Run Sliced Prediction
+    # args at https://github.com/obss/sahi/blob/main/sahi/predict.py
+
     result = get_sliced_prediction(
         img_path,
         DETECTION_MODEL,
-        batch_size=10,
         slice_height=2000,
         slice_width=2000,
-        overlap_height_ratio=0.4,
-        overlap_width_ratio=0.4,
-        postprocess_match_threshold=0.3,
+        batch_size=2,
+        overlap_height_ratio=0.4,  # default 0.2
+        overlap_width_ratio=0.4,  # default 0.2
+        postprocess_match_threshold=0.4,  # default 0.5
         perform_standard_pred=True,
+        postprocess_match_metric='IOS',  # default IOS
+        postprocess_type="GREEDYNMM"  # default GREEDYNMM
     )
 
     # Convert to COCO format using the INTEGER ID from the GT
@@ -136,7 +140,7 @@ if __name__ == "__main__":
     sahi coco evaluate --dataset_json_path /home/ecdysis/ultralytics/eval_dataset_pano/dataset_test.json \
                    --result_json_path /home/ecdysis/ultralytics/eval_dataset_pano/evaluation_result.json \
                    --type segm \
-                   --classwise
+                   --out_dir local_files/output
     """
     curr_dir = os.getcwd()
     dataset_dir = f'{curr_dir}/eval_dataset_pano/'
