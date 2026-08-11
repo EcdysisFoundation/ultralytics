@@ -91,7 +91,7 @@ def main(args):
                     elif args.label_format == 'yolo':
                         img_filename = str(Path(img_path).name)
                         new_filename_path = Path(f"{d['upload_dir_name']}__{d['guid']}__{img_filename}")
-                        task_name_path = Path(args.yolo_format_file_dir) / args.task_dir
+                        task_name_path = Path(args.yolo_format_dir) / args.task_dir
                         task_name_path.mkdir(parents=True, exist_ok=True)
                         full_img_save_path = str(task_name_path / new_filename_path)
                         full_label_save_path = str(task_name_path / f'{new_filename_path.stem}.txt')
