@@ -23,9 +23,21 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--label-format', choices=['yolo', 'label_studio', 'skip'], default='yolo')
     parser.add_argument('--file-mount', type=str, default='/pool1/srv/label-studio/mydata/stitchermedia')
     parser.add_argument('--label-studio-img-dir', type=str, default='/pool1/srv/label-studio/mydata/labeling_files')
+    parser.add_argument(
+        '--site-range',
+        type=lambda s: [item.strip() for item in s.split(',')],
+        help='length 2, Comma-separated range of starting and ending site numbers'
+    )
+    parser.add_argument(
+            '--panos',
+            type=lambda s: [item.strip() for item in s.split(',')],
+            help='Comma-separated pano site names'
+        )
     args = parser.parse_args()
     if args.label_format == 'yolo' and not args.task_dir:
         parser.error("--task-dir is required when --label-format is 'yolo'")
+    if args.site_range and len(args.site_range != 2):
+        parser.error(f'--site-range requires length of 2, starting and ending. You entered {args.site_range}')
     return args
 
 
@@ -37,9 +49,8 @@ def main(args):
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
 
-    # these args can be long
-    send_these_sites = []  # send based on sitecode example [str(i) for i in range(4141, 4161)]
-    send_these_panos = []  # use the upload_dir, example [4308_sw_T2, ...]
+    send_these_sites = [str(i) for i in range(args.site_range[0], args.site_rage[1] + 1)]
+    send_these_panos = args.panos if args.panos else []
 
     all_filters = send_these_sites + send_these_panos
     if len(all_filters) == 0:
