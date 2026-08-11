@@ -58,12 +58,15 @@ def main():
                 if skip_if_annotations and d['annotations_segment']:
                     print(f"skip_if_annotations enabled, skipping {d['upload_dir_name']} has annotations")
                     continue
-                p = file_mount + d['panorama_path']
-                p = p.replace('/media', '')
-                if os.path.exists(p):
-                    print(f'performing inference on {p}')
+                img_path = file_mount + d['panorama_path']
+                img_path = img_path.replace('/media', '')
+                if os.path.exists(img_path):
+                    print(f'performing inference on {img_path}')
                     print(f"upload_dir_name is {d['upload_dir_name']}")
-                    coco_result, original_width, original_height = predict(p)
+                    result = predict(img_path)
+                    original_width = result.image_width
+                    original_height = result.image_height
+                    coco_result = result.to_coco_predictions(image_id=os.path.basename(img_path))
                     # filter missing bbox
                     coco_result = [v for v in coco_result if v['bbox']]
                     # filter based on bbox size
@@ -86,7 +89,7 @@ def main():
                         img_filename = str(Path(p).name)
                         new_filename_path = Path(f"{d['guid']}__{img_filename}")
                         full_img_save_path = str(Path(label_studio_img_dir) / new_filename_path)
-                        save_labeling_img(p, full_img_save_path)
+                        save_labeling_img(img_path, full_img_save_path)
 
                     if save_yolo_format_files:
                         img_filename = str(Path(p).name)
@@ -95,7 +98,7 @@ def main():
                         task_name_path.mkdir(parents=True, exist_ok=True)
                         full_img_save_path = str(task_name_path / new_filename_path)
                         full_label_save_path = str(task_name_path / f'{new_filename_path.stem}.txt')
-                        save_labeling_img(p, full_img_save_path)
+                        save_labeling_img(img_path, full_img_save_path)
                         yolo_annotations = convert_coco_to_yolo(coco_result, original_width, original_height)
                         # write segmentation label file
                         with open(full_label_save_path, mode="w", encoding="utf-8") as file:
@@ -106,7 +109,7 @@ def main():
 
                 else:
                     print('path not found')
-                    print(p)
+                    print(img_path)
 
 
 if __name__ == '__main__':

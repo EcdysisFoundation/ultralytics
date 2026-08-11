@@ -5,13 +5,12 @@ import cv2
 from pathlib import Path
 from PIL import Image
 
-from sahi.predict import get_sliced_prediction
 from sahi.prediction import ObjectPrediction
 from skimage.morphology import remove_small_objects
 from skimage.measure import label
 
 from dataset_generation.utils import convert_coco_to_yolo
-from .sahi_segmentation import DETECTION_MODEL
+from .sahi_segmentation import predict
 
 
 def get_args() -> argparse.Namespace:
@@ -27,31 +26,6 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--anno-size-gte', type=int, default=50)
     args = parser.parse_args()
     return args
-
-
-def predict(img_path, save_img_file=False):
-    print(f'running prediction on device {DETECTION_MODEL.device}')
-    result = get_sliced_prediction(
-        img_path,
-        DETECTION_MODEL,
-        slice_height=2000,
-        slice_width=2000,
-        overlap_height_ratio=0.4,
-        overlap_width_ratio=0.4,
-        postprocess_match_threshold=0.4,
-        perform_standard_pred=True,
-        postprocess_match_metric='IOS',
-        postprocess_type="GREEDYNMM"
-    )
-    if save_img_file:
-        filename = os.path.splitext(os.path.basename(img_path))[0]
-        result.export_visuals(
-            export_dir="local_files/output/inference",
-            file_name=filename,
-            hide_labels=True,
-            hide_conf=True)
-
-    return result
 
 
 def label_original_components(cropped_mask):

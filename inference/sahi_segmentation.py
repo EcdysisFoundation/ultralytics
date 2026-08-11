@@ -32,10 +32,6 @@ def predict(img_path, save_img_file=False):
         postprocess_match_metric='IOS',  # default IOS
         postprocess_type="GREEDYNMM"  # default GREEDYNMM
     )
-    original_width = result.image_width
-    original_height = result.image_height
-    coco_result = result.to_coco_predictions(
-        image_id=os.path.basename(img_path))
     # optionally save image file
     if save_img_file:
         combined_path_filename = img_path.replace('/panorama', '_panorama')
@@ -46,4 +42,4 @@ def predict(img_path, save_img_file=False):
             hide_labels=True,
             hide_conf=True)
 
-    return coco_result, original_width, original_height
+    return result
