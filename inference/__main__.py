@@ -36,8 +36,11 @@ def get_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.label_format == 'yolo' and not args.task_dir:
         parser.error("--task-dir is required when --label-format is 'yolo'")
-    if args.site_range and len(args.site_range) != 2:
-        parser.error(f'--site-range requires length of 2, starting and ending. You entered {args.site_range}')
+    if args.site_range:
+        if len(args.site_range) != 2:
+            parser.error(f'--site-range requires length of 2, starting and ending. You entered {args.site_range}')
+        v = [int(site) for site in args.site_range]
+        args.site_range = v
     return args
 
 
