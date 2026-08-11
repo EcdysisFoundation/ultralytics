@@ -170,13 +170,11 @@ def split_self_bridges_remove_small(obj, min_size_px: int):
     has_mask = getattr(obj, "mask", None) is not None
     has_bbox = getattr(obj, "bbox", None) is not None
     if not has_mask or not has_bbox:
+        print('WARNING: no mask or bbox')
         return [obj]
 
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
     labeled_orig, num_labels = label_original_components(cropped_mask)
-    if num_labels <= 1:
-        return [obj]
-
     cleaned_mask = remove_small_attachments(labeled_orig, min_size_px)
     print("num_labels:", num_labels)
     print("original sum:", cropped_mask.sum(), "cleaned sum:", cleaned_mask.sum())
@@ -208,8 +206,9 @@ def main(args):
     pred_result = predict(input_file, save_img_file=args.save_img)
 
     if args.apply_bridge_splitting:
-        print(f'len(pred_result.object_prediction_list) before: {len(pred_result.object_prediction_list)}')
-        pred_result = apply_bridge_splitting(pred_result, min_size_px=625)
+        initial_len_result = len(pred_result.object_prediction_list)
+        pred_result = apply_bridge_splitting(pred_result, min_size_px=1250)
+        print(f'len(pred_result.object_prediction_list) before: {initial_len_result}')
         print(f'len(pred_result.object_prediction_list) after: {len(pred_result.object_prediction_list)}')
 
     original_width = pred_result.image_width
@@ -236,3 +235,22 @@ if __name__ == '__main__':
         print(f'raised MAX_IMAGE_PIXES to {Image.MAX_IMAGE_PIXELS}')
 
     main(args)
+
+
+"""
+# examples:
+
+# with bridge splitting
+python -m inference.infer_local3 \
+--input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
+--output-dir cvat-tasks/4124_sw_T2_debridge \
+--apply-bridge-splitting
+
+# without bridge splitting
+python -m inference.infer_local3 \
+--input-file label-studio/mydata/stitchermedia/0c5dc6cf-3d75-4434-ba11-a98736489b25/panorama.jpg \
+--output-file 4124_sw_T2__0c5dc6cf-3d75-4434-ba11-a98736489b25__panorama.txt \
+--output-dir cvat-tasks/4124_sw_T2_standard
+
+"""
