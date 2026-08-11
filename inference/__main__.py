@@ -49,7 +49,7 @@ def main(args):
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
 
-    send_these_sites = [str(i) for i in range(args.site_range[0], args.site_rage[1] + 1)]
+    send_these_sites = [str(i) for i in range(args.site_range[0], args.site_range[1] + 1)]
     send_these_panos = args.panos if args.panos else []
 
     all_filters = send_these_sites + send_these_panos
