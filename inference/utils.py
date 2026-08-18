@@ -48,8 +48,8 @@ def label_original_components(cropped_mask):
 
 
 def remove_small_attachments(labeled_orig, min_size_px: int):
-    cleaned_labeled = remove_small_objects(labeled_orig, min_size=min_size_px, connectivity=1)
-    cleaned_mask = cleaned_labeled > 0
+    binary_input = labeled_orig > 0
+    cleaned_mask = remove_small_objects(binary_input, min_size=min_size_px, connectivity=1)
     return cleaned_mask
 
 
