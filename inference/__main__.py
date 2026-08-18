@@ -16,8 +16,9 @@ def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Dataset generation')
     parser.add_argument('--task-dir', type=str, help='sub directory for yolo_format_dir')
     parser.add_argument('--yolo_format_dir', type=str, default='/pool1/srv/cvat-tasks')
-    parser.add_argument('--bypass-bridge-splitting', action='store_true', help='apply morphology bridge splitting')
-    parser.add_argument('--skip-in-labeling-project', action='store_true')
+    parser.add_argument('--bypass-bridge-splitting', action='store_true', help='skip morphology bridge splitting')
+    parser.add_argument('--skip-in-labeling-project', action='store_true',
+                        help='do not use if in a labeling project')
     parser.add_argument('--anno-size-gte', type=int, default=50)
     parser.add_argument('--min-size-px', type=int, default=1250)
     parser.add_argument('--label-format', choices=['yolo', 'label_studio', 'skip'], default='yolo')
