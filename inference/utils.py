@@ -109,10 +109,10 @@ def segments_to_bbox(segments):
     return [float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max())]
 
 
-def split_cleaned_components_to_objects(obj, cleaned_mask):
-
+def split_cleaned_components_to_objects(obj, cleaned_mask, num_labels):
     labeled_cleaned, num_labels_cleaned = label_cleaned_components(cleaned_mask)
-    print("num_labels_cleaned:", num_labels_cleaned)
+    if num_labels != num_labels_cleaned:
+        print(f'number_labels: {num_labels}, cleaned_number_labels: {num_labels_cleaned}')
     new_objects = []
     for k in range(1, num_labels_cleaned + 1):
         component_mask = (labeled_cleaned == k)
@@ -150,9 +150,11 @@ def split_self_bridges_remove_small(obj, min_size_px: int):
     cropped_mask = object_prediction_to_bbox_mask_local(obj)
     labeled_orig, num_labels = label_original_components(cropped_mask)
     cleaned_mask = remove_small_attachments(labeled_orig, min_size_px)
-    print("num_labels:", num_labels)
-    print("original sum:", cropped_mask.sum(), "cleaned sum:", cleaned_mask.sum())
-    return split_cleaned_components_to_objects(obj, cleaned_mask)
+    cropped_mask_sum = cropped_mask.sum()
+    cleaned_mask_sum = cleaned_mask.sum()
+    if cropped_mask_sum != cleaned_mask_sum:
+        print(f'cropped_mask_sum: {cropped_mask_sum}, cleaned_mask_sum: {cleaned_mask_sum}')
+    return split_cleaned_components_to_objects(obj, cleaned_mask, num_labels)
 
 
 def apply_bridge_splitting(pred_result, min_size_px: int):
