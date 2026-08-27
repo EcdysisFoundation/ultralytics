@@ -123,6 +123,8 @@ def main(args):
                     print('path not found')
                     print(img_path)
 
+    print('...inferece complete')
+
 
 if __name__ == '__main__':
     args = get_args()
