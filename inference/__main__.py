@@ -30,9 +30,14 @@ def get_args() -> argparse.Namespace:
         help='length 2, Comma-separated range of starting and ending site numbers'
     )
     parser.add_argument(
+        '--site-list',
+        type=lambda s: [item.strip() for item in s.split(',')],
+        help='Comma-separated site names'
+    )
+    parser.add_argument(
             '--panos',
             type=lambda s: [item.strip() for item in s.split(',')],
-            help='Comma-separated pano site names'
+            help='Comma-separated pano names'
         )
     args = parser.parse_args()
     if args.label_format == 'yolo' and not args.task_dir:
@@ -53,10 +58,12 @@ def main(args):
     print(f'CUDA is available: {torch.cuda.is_available()}')
     print(torch.cuda.get_device_name(0))
 
-    send_these_sites = [str(i) for i in range(args.site_range[0], args.site_range[1] + 1)]
+    send_these_sites = [str(i) for i in range(args.site_range[0], args.site_range[1] + 1)] if args.site_range else []
     send_these_panos = args.panos if args.panos else []
+    site_list = args.site_list if args.site_list else []
 
-    all_filters = send_these_sites + send_these_panos
+    all_filters = send_these_sites + send_these_panos + site_list
+    all_sites = send_these_sites + site_list
     if len(all_filters) == 0:
         print('WARNING: no filter for sites or panos is not allowed, exiting')
         return
@@ -65,7 +72,7 @@ def main(args):
 
         for d in filtered_data:
             # we use a name convention in first for characters, filter those
-            if d['upload_dir_name'][:4] not in send_these_sites \
+            if d['upload_dir_name'][:4] not in all_sites \
                     and d['upload_dir_name'] not in send_these_panos:
                 continue
             if d['label_studio_project'] and args.skip_in_labeling_project:
